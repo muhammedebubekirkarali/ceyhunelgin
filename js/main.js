@@ -1,0 +1,296 @@
+// ============================================================
+// Ceyhun Elgin — site interactions + i18n (TR/EN)
+// ============================================================
+
+const root = document.documentElement;
+
+// ---------- i18n dictionary ----------
+const I18N = {
+  en: {
+    'meta.title': 'Ceyhun Elgin — Professor of Economics, Boğaziçi University',
+    'a11y.skip': 'Skip to main content',
+    'a11y.themeDark': 'Switch to dark theme',
+    'a11y.themeLight': 'Switch to light theme',
+    'a11y.menu': 'Toggle menu',
+    'a11y.toTop': 'Back to top',
+    'a11y.mainnav': 'Main navigation', 'a11y.tags': 'Research interests',
+    'a11y.stats': 'Overview', 'a11y.footnav': 'Footer',
+    'nav.about': 'About', 'nav.books': 'Books', 'nav.projects': 'Projects',
+    'nav.publications': 'Publications', 'nav.teaching': 'Teaching', 'nav.contact': 'Contact',
+    'hero.kicker': 'Professor of Economics · Boğaziçi University',
+    'hero.bio': 'Ph.D. in Economics, University of Minnesota, 2010. My research focuses on macroeconomics, growth and development, the informal (shadow) economy, public economics and political economics.',
+    'hero.tag1': 'Macroeconomics', 'hero.tag2': 'Growth & Development',
+    'hero.tag3': 'Informal (Shadow) Economy', 'hero.tag4': 'Public Economics', 'hero.tag5': 'Political Economics',
+    'hero.cv': 'Download CV',
+    'facts.affiliation': 'Affiliation', 'facts.affiliation.v': 'Boğaziçi University, Department of Economics',
+    'facts.doctorate': 'Doctorate', 'facts.doctorate.v': 'University of Minnesota, 2010',
+    'facts.office': 'Office', 'facts.phone': 'Phone',
+    'stats.pubs': 'Publications', 'stats.books': 'Books', 'stats.unis': 'Universities', 'stats.links': 'DOI / Source Links',
+    'books.title': 'Books',
+    'books.amazon': 'View on Amazon →', 'books.amazon2': 'View on Amazon →',
+    'books.b4label': 'Edited Volume · Routledge, 2024', 'books.b4note': 'Editor — New York: Routledge',
+    'books.b5label': 'Monograph · Routledge, 2021',
+    'projects.title': 'Projects & Media',
+    'projects.p1note': 'YouTube channel on economics, in Turkish.', 'projects.p1link': 'Watch on YouTube →',
+    'projects.p2label': 'Dataset / Index', 'projects.p2link': 'Explore the index →',
+    'projects.p3label': 'EU Funded', 'projects.p3link': 'Project page →',
+    'pubs.title': 'Publications',
+    'pubs.intro': '126 journal articles, book chapters and books — grouped by year. Click a year to expand.',
+    'pubs.search': 'Filter publications… (e.g. informality, COVID, growth)',
+    'pubs.expandAll': 'Expand all', 'pubs.collapseAll': 'Collapse all',
+    'pubs.found': '{n} matching publications', 'pubs.none': 'No publications found',
+    'teach.title': 'Teaching',
+    'contact.title': 'Contact', 'contact.mail': 'E-mail', 'contact.phone': 'Phone',
+    'contact.addr': 'Address',
+    'contact.addr.v': 'Boğaziçi University, Department of Economics<br>Bebek, 34342 Beşiktaş / İstanbul, Türkiye',
+    'contact.links': 'Links', 'contact.faculty': 'Boğaziçi faculty page',
+    'footer.tag': 'Professor of Economics, Boğaziçi University',
+    'footer.line': '© 2026 Ceyhun Elgin · All rights reserved.',
+    'pubsrc.source': 'Source / DOI', 'pubsrc.repec': 'RePEc record', 'pubsrc.book': 'Book page'
+  },
+  tr: {
+    'meta.title': 'Ceyhun Elgin — İktisat Profesörü, Boğaziçi Üniversitesi',
+    'a11y.skip': 'İçeriğe atla',
+    'a11y.themeDark': 'Koyu temaya geç',
+    'a11y.themeLight': 'Açık temaya geç',
+    'a11y.menu': 'Menüyü aç/kapat',
+    'a11y.toTop': 'Yukarı dön',
+    'a11y.mainnav': 'Ana gezinme', 'a11y.tags': 'Araştırma alanları',
+    'a11y.stats': 'Genel bakış', 'a11y.footnav': 'Alt bilgi',
+    'nav.about': 'Hakkında', 'nav.books': 'Kitaplar', 'nav.projects': 'Projeler',
+    'nav.publications': 'Yayınlar', 'nav.teaching': 'Dersler', 'nav.contact': 'İletişim',
+    'hero.kicker': 'İktisat Profesörü · Boğaziçi Üniversitesi',
+    'hero.bio': 'Doktora: Minnesota Üniversitesi, 2010. Araştırmalarım makroekonomi, büyüme ve kalkınma, kayıt dışı ekonomi, kamu iktisadı ve politik iktisat alanlarına odaklanıyor.',
+    'hero.tag1': 'Makroekonomi', 'hero.tag2': 'Büyüme ve Kalkınma',
+    'hero.tag3': 'Kayıt Dışı Ekonomi', 'hero.tag4': 'Kamu İktisadı', 'hero.tag5': 'Politik İktisat',
+    'hero.cv': 'CV İndir',
+    'facts.affiliation': 'Kurum', 'facts.affiliation.v': 'Boğaziçi Üniversitesi, İktisat Bölümü',
+    'facts.doctorate': 'Doktora', 'facts.doctorate.v': 'Minnesota Üniversitesi, 2010',
+    'facts.office': 'Ofis', 'facts.phone': 'Telefon',
+    'stats.pubs': 'Yayın', 'stats.books': 'Kitap', 'stats.unis': 'Üniversite', 'stats.links': 'DOI / Kaynak Bağlantısı',
+    'books.title': 'Kitaplar',
+    'books.amazon': "Amazon'da görüntüle →", 'books.amazon2': "Amazon'da görüntüle →",
+    'books.b4label': 'Derleme · Routledge, 2024', 'books.b4note': 'Editör — New York: Routledge',
+    'books.b5label': 'Monografi · Routledge, 2021',
+    'projects.title': 'Projeler ve Medya',
+    'projects.p1note': 'Ekonomi üzerine Türkçe YouTube kanalı.', 'projects.p1link': "YouTube'da izle →",
+    'projects.p2label': 'Veri Seti / Endeks', 'projects.p2link': 'Endeksi incele →',
+    'projects.p3label': 'AB Destekli', 'projects.p3link': 'Proje sayfası →',
+    'pubs.title': 'Yayınlar',
+    'pubs.intro': '126 makale, kitap bölümü ve kitap — yıllara göre gruplandırıldı. Açmak için bir yıla tıklayın.',
+    'pubs.search': 'Yayınlarda ara… (örn. kayıt dışı, COVID, büyüme)',
+    'pubs.expandAll': 'Tümünü aç', 'pubs.collapseAll': 'Tümünü kapat',
+    'pubs.found': '{n} yayın bulundu', 'pubs.none': 'Yayın bulunamadı',
+    'teach.title': 'Dersler',
+    'contact.title': 'İletişim', 'contact.mail': 'E-posta', 'contact.phone': 'Telefon',
+    'contact.addr': 'Adres',
+    'contact.addr.v': 'Boğaziçi Üniversitesi, İktisat Bölümü<br>Bebek, 34342 Beşiktaş / İstanbul, Türkiye',
+    'contact.links': 'Bağlantılar', 'contact.faculty': 'Boğaziçi fakülte sayfası',
+    'footer.tag': 'İktisat Profesörü, Boğaziçi Üniversitesi',
+    'footer.line': '© 2026 Ceyhun Elgin · Tüm hakları saklıdır.',
+    'pubsrc.source': 'Kaynak / DOI', 'pubsrc.repec': 'RePEc kaydı', 'pubsrc.book': 'Kitap sayfası'
+  }
+};
+
+let LANG = 'en';
+const t = (key) => (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
+
+// ---------- Theme icons ----------
+const ICON_SUN = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.3 4.3l1.7 1.7M18 18l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.3 19.7L6 18M18 6l1.7-1.7"/></svg>';
+const ICON_MOON = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13.5A8.5 8.5 0 1 1 10.5 4a7 7 0 0 0 9.5 9.5z"/></svg>';
+
+const themeBtn = document.getElementById('themeToggle');
+
+function setTheme(theme, skipSave) {
+  root.dataset.theme = theme;
+  themeBtn.innerHTML = theme === 'dark' ? ICON_SUN : ICON_MOON;
+  themeBtn.setAttribute('aria-label', t(theme === 'dark' ? 'a11y.themeLight' : 'a11y.themeDark'));
+  if (!skipSave) { try { localStorage.setItem('theme', theme); } catch (e) { /* private mode */ } }
+}
+
+themeBtn.addEventListener('click', () =>
+  setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark')
+);
+
+// ---------- Publications: filter + expand/collapse ----------
+const yearBlocks = [...document.querySelectorAll('#publications details.year')];
+const searchInput = document.getElementById('pubSearch');
+const status = document.getElementById('pubStatus');
+
+yearBlocks.forEach((d) => {
+  d.dataset.count = d.querySelector('.year__count').textContent;
+});
+
+function resetFilter() {
+  yearBlocks.forEach((d, i) => {
+    d.style.display = '';
+    d.querySelector('.year__count').textContent = d.dataset.count;
+    d.querySelectorAll('.pubs li').forEach((li) => (li.style.display = ''));
+    d.open = i === 0;
+  });
+  status.textContent = '';
+}
+
+function runFilter() {
+  const q = searchInput.value.trim().toLowerCase();
+  if (q.length === 0) { resetFilter(); return; }
+  if (q.length < 2) return;
+
+  let total = 0;
+  yearBlocks.forEach((d) => {
+    let n = 0;
+    d.querySelectorAll('.pubs li').forEach((li) => {
+      const hit = li.textContent.toLowerCase().includes(q);
+      li.style.display = hit ? '' : 'none';
+      if (hit) n++;
+    });
+    d.open = n > 0;
+    d.style.display = n ? '' : 'none';
+    d.querySelector('.year__count').textContent = n;
+    total += n;
+  });
+  status.textContent = total ? t('pubs.found').replace('{n}', total) : t('pubs.none');
+}
+
+searchInput.addEventListener('input', runFilter);
+
+document.getElementById('expandAll').addEventListener('click', () => {
+  searchInput.value = '';
+  resetFilter();
+  yearBlocks.forEach((d) => (d.open = true));
+});
+
+document.getElementById('collapseAll').addEventListener('click', () => {
+  searchInput.value = '';
+  resetFilter();
+  yearBlocks.forEach((d) => (d.open = false));
+});
+
+// ---------- Language ----------
+function applyLang(lang) {
+  LANG = I18N[lang] ? lang : 'en';
+  root.lang = LANG;
+  document.title = t('meta.title');
+
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.innerHTML = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-attr]').forEach((el) => {
+    el.dataset.i18nAttr.split(',').forEach((pair) => {
+      const idx = pair.indexOf(':');
+      if (idx > 0) el.setAttribute(pair.slice(0, idx).trim(), t(pair.slice(idx + 1).trim()));
+    });
+  });
+
+  // pub-src link başlıkları
+  document.querySelectorAll('.pub-src').forEach((a) => {
+    a.title = t('pubsrc.' + (a.dataset.kind || 'source'));
+  });
+
+  // tema butonu etiketini güncel dile göre tazele
+  setTheme(root.dataset.theme || 'light', true);
+
+  // dil butonları aktiflik durumu
+  document.querySelectorAll('.lang-switch button').forEach((b) =>
+    b.classList.toggle('active', b.dataset.lang === LANG)
+  );
+
+  // aktif filtre varsa durum metnini yeni dilde yeniden üret
+  if (searchInput.value.trim().length >= 2) runFilter();
+
+  try { localStorage.setItem('lang', LANG); } catch (e) { /* private mode */ }
+}
+
+document.querySelectorAll('.lang-switch button').forEach((b) =>
+  b.addEventListener('click', () => applyLang(b.dataset.lang))
+);
+
+// ---------- Mobile navigation ----------
+const toggle = document.querySelector('.nav__toggle');
+const links = document.querySelector('.nav__links');
+
+toggle.addEventListener('click', () => {
+  const open = links.classList.toggle('open');
+  toggle.setAttribute('aria-expanded', open);
+});
+
+links.querySelectorAll('a').forEach((a) =>
+  a.addEventListener('click', () => {
+    links.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  })
+);
+
+// ---------- Scroll-spy ----------
+const sections = document.querySelectorAll('main section[id]');
+const navAnchors = document.querySelectorAll('.nav__links a');
+
+const observer = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        navAnchors.forEach((a) =>
+          a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id)
+        );
+      }
+    });
+  },
+  { rootMargin: '-40% 0px -55% 0px' }
+);
+
+sections.forEach((s) => observer.observe(s));
+
+// ---------- Print ----------
+let printState = null;
+window.addEventListener('beforeprint', () => {
+  printState = yearBlocks.map((d) => d.open);
+  yearBlocks.forEach((d) => (d.open = true));
+  revealEls.forEach((el) => el.classList.add('visible'));
+});
+window.addEventListener('afterprint', () => {
+  if (printState) yearBlocks.forEach((d, i) => (d.open = printState[i]));
+});
+
+// ---------- Back to top ----------
+const toTop = document.getElementById('toTop');
+window.addEventListener(
+  'scroll',
+  () => toTop.classList.toggle('show', window.scrollY > 600),
+  { passive: true }
+);
+toTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+// ---------- Scroll reveal ----------
+const revealEls = document.querySelectorAll(
+  '.section__title, .section__intro, .card, .teach, .contact__item, .year, .stat, .pub-toolbar'
+);
+revealEls.forEach((el) => el.classList.add('reveal'));
+const revealObs = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        revealObs.unobserve(entry.target);
+      }
+    });
+  },
+  { rootMargin: '0px 0px -8% 0px', threshold: 0.05 }
+);
+revealEls.forEach((el) => revealObs.observe(el));
+
+// ---------- Init ----------
+// pub-src başlık türlerini ilk yüklemede sınıflandır
+document.querySelectorAll('.pub-src').forEach((a) => {
+  const s = a.title.toLowerCase();
+  a.dataset.kind = s.includes('repec') ? 'repec' : s.includes('kitap') ? 'book' : 'source';
+});
+
+const urlParams = new URLSearchParams(location.search);
+const stored = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+
+setTheme(urlParams.get('theme') || stored('theme') ||
+  (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'), true);
+
+const initialLang = urlParams.get('lang') || stored('lang') ||
+  ((navigator.language || 'en').toLowerCase().startsWith('tr') ? 'tr' : 'en');
+applyLang(initialLang);
