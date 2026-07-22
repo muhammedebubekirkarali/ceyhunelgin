@@ -1,0 +1,22 @@
+name: "Proje Sil"
+description: "Mevcut bir projeyi listeden kaldirin."
+title: "Proje Sil: <kisa baslik>"
+labels:
+  - "sil-proje"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Kaldirilacak projeyi asagidaki listeden secin.
+        (Proje eklenip silindikce bu liste otomatik guncellenir; guncel degilse sayfa yeniden acin.)
+  - type: dropdown
+    id: title
+    attributes:
+      label: "Kaldirilacak proje"
+      description: "Mevcut projelerden birini secin."
+      options:
+        - "Informal Economics"
+        - "COVID-19 Economic Stimulus Index"
+        - "Jean Monnet Project"
+    validations:
+      required: true

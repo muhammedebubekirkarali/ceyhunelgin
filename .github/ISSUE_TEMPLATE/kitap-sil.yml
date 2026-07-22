@@ -1,0 +1,24 @@
+name: "Kitap Sil"
+description: "Mevcut bir kitabi listeden kaldirin."
+title: "Kitap Sil: <kisa baslik>"
+labels:
+  - "sil-kitap"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Kaldirilacak kitabi asagidaki listeden secin.
+        (Kitap eklenip silindikce bu liste otomatik guncellenir; guncel degilse sayfa yeniden acin.)
+  - type: dropdown
+    id: title
+    attributes:
+      label: "Kaldirilacak kitap"
+      description: "Mevcut kitaplardan birini secin."
+      options:
+        - "The Art and Science of Tax Evasion"
+        - "Bu Hesapta Bir Gariplik Var"
+        - "Sen de Ekonomistsin"
+        - "Routledge Handbook of the Informal Economy"
+        - "The Informal Economy: Measures, Causes, and Consequences"
+    validations:
+      required: true

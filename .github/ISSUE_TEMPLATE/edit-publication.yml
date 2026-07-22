@@ -1,23 +1,23 @@
 name: "Yayin Duzelt"
-description: "Mevcut bir yayinin bilgilerini guncelleyin. Once degisecek yayini, sonra yeni bilgileri yazin."
+description: "Mevcut bir yayinin bilgilerini goster + duzelt. Bot once mevcut degerleri yorum olarak gosterir."
 title: "Yayin Duzelt: <kisa baslik>"
 labels:
-  - "yayin-duzelt"
+  - "duzelt-yayin"
 body:
   - type: markdown
     attributes:
       value: |
-        Bu form, listede var olan bir yayini yeni bilgilerle gunceller.
-        **Degisecek yayini once asagidaki listeden secin**, sonra yeni degerleri girin.
-        Bos biraktiginiz alanlardaki mevcut degerler korunur.
-        (Yeni yayin eklendiginde bu liste otomatik guncellenir; guncel degilse
-        sayfa yeniden acin.)
+        Bu form, var olan bir yayini gunceller.
+
+        **Adim 1:** Asagidaki listeden duzeltmek istediginiz yayini secin ve "Submit" yapin.
+        **Adim 2:** Bot, secili yayinin mevcut tum bilgilerini (yil, baslik, yazarlar, dergi, DOI) yorum olarak gosterir.
+        **Adim 3:** O yoruma cevap olarak degistirmek istediginiz degerleri yazin (yalnizca guncellemek istediklerinizi).
 
   - type: dropdown
     id: old_title
     attributes:
-      label: "Degisecek yayin"
-      description: "Site uzerindeki mevcut yayinlardan birini secin."
+      label: "Duzeltilecek yayin"
+      description: "Sitedeki mevcut yayinlardan birini secin."
       options:
         - "[2026] The Economic Unconscious: Towards a Psychoanalytic Macroeconomics"
         - "[2026] Green Finance and the Informal Economy: How ESG Capitalism Excludes the Global South's Working Majority"
@@ -147,39 +147,3 @@ body:
         - "[2011] Accounting for Turkish Business Cycles"
     validations:
       required: true
-
-  - type: markdown
-    attributes:
-      value: "--- Yeni degerler (degistirmek istemediginiz alanlari bos birakin; bos alanlar mevcut degeri korur) ---"
-
-  - type: input
-    id: year
-    attributes:
-      label: "Yeni Yil (opsiyonel)"
-      placeholder: "2026"
-
-  - type: input
-    id: title
-    attributes:
-      label: "Yeni Baslik (opsiyonel)"
-      description: "Baslik degismeyecekse bos birakin."
-      placeholder: "Shadow Economies around the World: Evidence from Metropolitan Areas"
-
-  - type: input
-    id: authors
-    attributes:
-      label: "Yeni Yazarlar (opsiyonel)"
-      description: "Birden fazla yazarda 'X and Y' seklinde. Yardiz ise bos birakin."
-      placeholder: "Adem Y. Elveren and Eric Budd"
-
-  - type: input
-    id: venue
-    attributes:
-      label: "Yeni Dergi / yayin bilgisi (opsiyonel)"
-      placeholder: "Journal of International Development, 60, 55-80."
-
-  - type: input
-    id: doi
-    attributes:
-      label: "Yeni DOI / Kaynak Baglantisi (opsiyonel)"
-      placeholder: "https://doi.org/10.xxx/xxx"

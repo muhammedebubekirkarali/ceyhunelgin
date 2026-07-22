@@ -1,0 +1,132 @@
+name: Icerik Ekle
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add:
+    if: contains(github.event.issue.labels.*.name, 'ekle-kitap') || contains(github.event.issue.labels.*.name, 'ekle-proje') || contains(github.event.issue.labels.*.name, 'ekle-ders')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ekle
+        shell: python
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+        run: |
+          import json, os, re, sys
+          from pathlib import Path
+          body = os.environ["ISSUE_BODY"].replace("\\(", "(").replace("\\)", ")")
+          labels = os.environ["ISSUE_LABELS"].split(",")
+          gh = Path(os.environ["GITHUB_ENV"])
+          def env(k, v):
+              v = str(v).replace("\n", " ").replace("\r", " ")
+              with gh.open("a") as f: f.write(f"{k}={v}\n")
+          def maybe(s): return s.strip() or None
+          def fv(label):
+              marker = "### " + label
+              i = body.find(marker)
+              if i < 0: return ""
+              started = False
+              vlines = []
+              for ln in body[i+len(marker):].split("\n")[1:]:
+                  if ln.startswith("### "): break
+                  if not started:
+                      if ln.strip() == "": continue
+                      started = True; vlines.append(ln)
+                  else:
+                      vlines.append(ln)
+              while vlines and vlines[-1].strip() == "": vlines.pop()
+              v = "\n".join(vlines).strip()
+              return "" if v in ("", "_No response_") else v
+          errs = []
+
+          if "ekle-kitap" in labels or "ekle-proje" in labels:
+              is_book = "ekle-kitap" in labels
+              fn = "books.json" if is_book else "projects.json"
+              kind = "Kitap" if is_book else "Proje"
+              title = fv("Baslik")
+              if not title: errs.append("Baslik bos.")
+              if errs: env("RESULT", "error"); env("MESSAGE", "; ".join(errs)); sys.exit(0)
+              item = {
+                  "label": maybe(fv("Etiket (kartin alt kismindaki kucuk etiket)")) if is_book else maybe(fv("Etiket")),
+                  "title": title.strip(),
+                  "note": maybe(fv("Not (basligin altindaki aciklama) - opsiyonel") if is_book else fv("Not (aciklama) - opsiyonel")),
+                  "link": maybe(fv("Baglanti (Amazon vb.) - opsiyonel") if is_book else fv("Baglanti - opsiyonel")),
+                  "link_label": maybe(fv("Baglanti metni - opsiyonel")),
+              }
+              data = json.loads(Path(fn).read_text(encoding="utf-8"))
+              data.append(item)
+              Path(fn).write_text(json.dumps(data, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
+              env("RESULT", "ok"); env("DESC", f"{kind}: {title}"); env("FILE", fn); env("COUNT", str(len(data)))
+
+          elif "ekle-ders" in labels:
+              uni = fv("Universite")
+              cname = fv("Ders adi")
+              level = fv("Duzey")
+              if not uni: errs.append("Universite bos.")
+              if not cname: errs.append("Ders adi bos.")
+              if not level: errs.append("Duzey bos.")
+              if errs: env("RESULT", "error"); env("MESSAGE", "; ".join(errs)); sys.exit(0)
+              data = json.loads(Path("teaching.json").read_text(encoding="utf-8"))
+              found = next((u for u in data if u["university"] == uni), None)
+              if not found:
+                  found = {"university": uni, "courses": []}
+                  data.append(found)
+              found["courses"].append({"name": cname, "level": level})
+              Path("teaching.json").write_text(json.dumps(data, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
+              env("RESULT", "ok"); env("DESC", f"Ders: {uni} - {cname}"); env("FILE", "teaching.json"); env("COUNT", str(sum(len(u["courses"]) for u in data)))
+          else:
+              sys.exit(0)
+
+          Path("commit_msg.txt").write_text(
+              f"Icerik eklendi (#{os.environ['ISSUE_NUMBER']}): {os.environ.get('DESC','')}\n",
+              encoding="utf-8",
+          )
+
+      - name: Commit + push
+        if: env.RESULT == 'ok'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add books.json projects.json teaching.json contact.json
+          git commit -F commit_msg.txt
+          git push
+          rm -f commit_msg.txt
+
+      - name: Basari yorumu + kapat
+        if: env.RESULT == 'ok'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Eklendi.\n\n- ${process.env.DESC}\n- Dosya: ${process.env.FILE}\n- Toplam: ${process.env.COUNT}\n\nSite bir dakika icinde guncellenir.`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: "closed"
+            });
+
+      - name: Hata yorumu + kapat
+        if: env.RESULT == 'error'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Form eksik:\n\n${process.env.MESSAGE}`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: "closed",
+              labels: ["hatali-form"]
+            });

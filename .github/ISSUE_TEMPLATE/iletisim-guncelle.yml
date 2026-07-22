@@ -1,0 +1,14 @@
+name: "Iletisim Guncelle"
+description: "Iletisim bolumunu (e-posta, telefon, linkler) guncellemek icin. Bot once mevcut degerleri gosterir."
+title: "Iletisim Guncelle"
+labels:
+  - "guncelle-iletisim"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bu form iletisim bolumunu gunceller.
+
+        **Adim 1:** "Submit" yapin (formda baska alan yok).
+        **Adim 2:** Bot, mevcut iletisim bilgilerini (e-posta, telefon, dis linkler) yorum olarak gosterir.
+        **Adim 3:** O yoruma cevap olarak degistirmek istediginiz degerleri yazin (yalnizca guncellemek istediklerinizi).

@@ -1,0 +1,34 @@
+name: "Ders Ekle"
+description: "Yeni bir ders ekleyin. Universite varsa ona eklenir; yoksa yeni universite karti olusur."
+title: "Ders Ekle: <kisa baslik>"
+labels:
+  - "ekle-ders"
+body:
+  - type: markdown
+    attributes:
+      value: "Ders eklemek icin universite, ders adi ve duzeyi doldurun."
+  - type: input
+    id: university
+    attributes:
+      label: "Universite"
+      description: "Mevcut universite adini aynen yazin ya da yeni universite adini yazin."
+      placeholder: "Bogazici University"
+    validations:
+      required: true
+  - type: input
+    id: course_name
+    attributes:
+      label: "Ders adi"
+      placeholder: "Intermediate Macroeconomics"
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: "Duzey"
+      options:
+        - "B.A."
+        - "M.A."
+        - "Ph.D."
+    validations:
+      required: true

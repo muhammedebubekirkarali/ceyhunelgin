@@ -1,0 +1,260 @@
+name: Duzeltmeyi Uygula
+
+# Bir duzelt-* / guncelle-iletisim etiketli issue'da hocanin yazdigi yorum
+# ("alan: yeni deger" satirlari) gelince JSON dosyasini gunceller ve issue'yu kapatir.
+# Bot'un kendi gosterme yorumunu atlariz (yazari github-actions[bot] kontrolu).
+# Mevcut ogeyi tespit icin issue body'sindeki dropdown degeri kullanilir
+# (github.event.issue.body issue_comment olayinda mevcut).
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  apply:
+    if: github.event.issue.pull_request == null && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Yorumu parse et + JSON guncelle
+        shell: python
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+        run: |
+          import json, os, re, sys
+          from pathlib import Path
+          body = os.environ["ISSUE_BODY"].replace("\\(", "(").replace("\\)", ")")
+          comment = os.environ["COMMENT_BODY"]
+          labels = os.environ["ISSUE_LABELS"].split(",")
+          gh = Path(os.environ["GITHUB_ENV"])
+          def env(k, v):
+              v = str(v).replace("\n", " ").replace("\r", " ")
+              with gh.open("a") as f: f.write(f"{k}={v}\n")
+          _cevir = str.maketrans({"ğ":"g","Ğ":"g","ı":"i","İ":"i","ö":"o","Ö":"o","ü":"u","Ü":"u","ş":"s","Ş":"s","ç":"c","Ç":"c"})
+          def norm(s): return re.sub(r"\s+", " ", s.strip().translate(_cevir)).lower()
+
+          def fv(label):
+              marker = "### " + label
+              i = body.find(marker)
+              if i < 0: return ""
+              started = False
+              vlines = []
+              for ln in body[i+len(marker):].split("\n")[1:]:
+                  if ln.startswith("### "): break
+                  if not started:
+                      if ln.strip() == "": continue
+                      started = True; vlines.append(ln)
+                  else:
+                      vlines.append(ln)
+              while vlines and vlines[-1].strip() == "": vlines.pop()
+              v = "\n".join(vlines).strip()
+              return "" if v in ("", "_No response_") else v
+
+          # Yorum icindeki "alan: deger" satirlarini topla (whitelist sadece)
+          ALLOWED_KEYS = {
+              "yil","baslik","yazarlar","dergi","doi",
+              "etiket","not","baglanti","baglanti_metni",
+              "universite","ders_adi","duzey",
+              "eposta","telefon","dis_linkler",
+          }
+          key_re = re.compile(r"^([A-Za-zçğıöşüĞİÖŞÜÇ _]+):", re.U)
+          pairs = {}
+          last_key = None
+          for ln in comment.splitlines():
+              s = ln.strip()
+              if not s or s.startswith("`") or s.startswith("**"):
+                  continue
+              m = key_re.match(s)
+              if m:
+                  key = m.group(1).strip().lower().replace(" ", "_")
+                  if key not in ALLOWED_KEYS:
+                      if last_key and s.startswith("http"):
+                          pairs[last_key] = pairs[last_key] + "\n" + s
+                      continue
+                  val = s[m.end():].strip()
+                  if not val:
+                      last_key = key
+                      continue
+                  pairs[key] = val
+                  last_key = key
+              else:
+                  if last_key and s.startswith("http"):
+                      pairs[last_key] = pairs[last_key] + "\n" + s
+          if not pairs:
+              env("RESULT", "empty"); sys.exit(0)
+
+          def save(fn, data):
+              Path(fn).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          def pick(items, key, title):
+              nt = norm(title)
+              m = next((it for it in items if norm(it[key]) == nt), None)
+              if m: return m, None
+              cands = [it for it in items if nt in norm(it[key]) or norm(it[key]) in nt]
+              if len(cands) > 1: return None, "cok"
+              if cands: return cands[0], None
+              return None, "yok"
+
+          kind = None
+          if "duzelt-yayin" in labels: kind = "yayin"
+          elif "duzelt-kitap" in labels: kind = "kitap"
+          elif "duzelt-proje" in labels: kind = "proje"
+          elif "duzelt-ders" in labels: kind = "ders"
+          elif "guncelle-iletisim" in labels: kind = "iletisim"
+
+          if kind == "yayin":
+              v = fv("Duzeltilecek yayin")
+              title = re.sub(r"^\[\d{4}\]\s*", "", v).strip()
+              pubs = json.loads(Path("publications.json").read_text(encoding="utf-8"))
+              m, err = pick(pubs, "title", title)
+              if not m: env("RESULT", "nomatch"); env("DESC", title); sys.exit(0)
+              upd = dict(m)
+              if "yil" in pairs:
+                  try: upd["year"] = int(pairs["yil"])
+                  except: pass
+              if "baslik" in pairs: upd["title"] = pairs["baslik"]
+              if "yazarlar" in pairs: upd["authors"] = pairs["yazarlar"] or None
+              if "dergi" in pairs: upd["venue"] = pairs["dergi"] or None
+              if "doi" in pairs: upd["doi"] = pairs["doi"] or None
+              idx = pubs.index(m); pubs[idx] = upd
+              pubs.sort(key=lambda p: p["year"], reverse=True)
+              save("publications.json", pubs)
+              env("RESULT", "ok"); env("OLD", m["title"]); env("NEW", upd["title"]); env("FILE", "publications.json")
+
+          elif kind in ("kitap", "proje"):
+              fn = "books.json" if kind == "kitap" else "projects.json"
+              v = fv("Duzeltilecek " + kind)
+              data = json.loads(Path(fn).read_text(encoding="utf-8"))
+              m, err = pick(data, "title", v)
+              if not m: env("RESULT", "nomatch"); env("DESC", v); sys.exit(0)
+              upd = dict(m)
+              if "baslik" in pairs: upd["title"] = pairs["baslik"]
+              if "etiket" in pairs: upd["label"] = pairs["etiket"] or None
+              if "not" in pairs: upd["note"] = pairs["not"] or None
+              if "baglanti" in pairs: upd["link"] = pairs["baglanti"] or None
+              if "baglanti_metni" in pairs: upd["link_label"] = pairs["baglanti_metni"] or None
+              idx = data.index(m); data[idx] = upd
+              save(fn, data)
+              env("RESULT", "ok"); env("OLD", m["title"]); env("NEW", upd["title"]); env("FILE", fn)
+
+          elif kind == "ders":
+              v = fv("Duzeltilecek ders")
+              parts = re.split(r"\s+—\s+", v, maxsplit=1)
+              uni = parts[0].strip()
+              rest = parts[1] if len(parts) > 1 else ""
+              course = re.sub(r"\s*\([^)]+\)\s*$", "", rest).strip()
+              data = json.loads(Path("teaching.json").read_text(encoding="utf-8"))
+              found_u = next((u for u in data if norm(u["university"]) == norm(uni)), None)
+              if not found_u: env("RESULT", "nomatch"); env("DESC", v); sys.exit(0)
+              m = next((c for c in found_u["courses"] if norm(c["name"]) == norm(course)), None)
+              if not m: env("RESULT", "nomatch"); env("DESC", v); sys.exit(0)
+              upd = dict(m)
+              old_uni_u = found_u
+              moved = False
+              if "universite" in pairs and norm(pairs["universite"]) != norm(found_u["university"]):
+                  # yeni universiteye gocer
+                  new_uni = pairs["universite"]
+                  target_u = next((u for u in data if norm(u["university"]) == norm(new_uni)), None)
+                  if not target_u:
+                      target_u = {"university": new_uni, "courses": []}
+                      data.append(target_u)
+                  found_u["courses"] = [c for c in found_u["courses"] if c is not m]
+                  if not found_u["courses"]:
+                      data = [u for u in data if u is not found_u]
+                  if "ders_adi" in pairs: upd["name"] = pairs["ders_adi"]
+                  if "duzey" in pairs: upd["level"] = pairs["duzey"]
+                  target_u["courses"].append(upd)
+                  moved = True
+              else:
+                  if "ders_adi" in pairs: upd["name"] = pairs["ders_adi"]
+                  if "duzey" in pairs: upd["level"] = pairs["duzey"]
+                  idx = found_u["courses"].index(m); found_u["courses"][idx] = upd
+              save("teaching.json", data)
+              env("RESULT", "ok"); env("OLD", f"{uni} - {course}"); env("NEW", f"{upd.get('name', course)}"); env("FILE", "teaching.json")
+
+          elif kind == "iletisim":
+              d = json.loads(Path("contact.json").read_text(encoding="utf-8"))
+              new_mails = d.get("mails", [])
+              if "eposta" in pairs:
+                  new_mails = [m.strip() for m in pairs["eposta"].split("|") if m.strip()]
+              phone = d.get("phone"); phone_disp = d.get("phone_display")
+              if "telefon" in pairs:
+                  phone_disp = pairs["telefon"]
+                  phone = re.sub(r"[^\d+]", "", pairs["telefon"])
+              links = d.get("links", [])
+              if "dis_linkler" in pairs:
+                  if pairs["dis_linkler"].strip().lower() in ("sil", "yok", "-"):
+                      links = []
+                  else:
+                      links = []
+                      for line in pairs["dis_linkler"].splitlines():
+                          line = line.lstrip("- ").strip()
+                          if not line: continue
+                          parts = line.split("|", 1)
+                          url = parts[0].strip()
+                          label = parts[1].strip() if len(parts) > 1 else url
+                          if url: links.append({"url": url, "label": label})
+              d = {"mails": new_mails, "phone": phone, "phone_display": phone_disp, "links": links}
+              save("contact.json", d)
+              env("RESULT", "ok"); env("OLD", "iletisim"); env("NEW", "iletisim guncellendi"); env("FILE", "contact.json")
+
+          else:
+              sys.exit(0)
+
+          Path("commit_msg.txt").write_text(
+              f"Duzeltme uygulandi (#{os.environ['ISSUE_NUMBER']}): {kind}\n",
+              encoding="utf-8",
+          )
+
+      - name: Commit + push
+        if: env.RESULT == 'ok'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add books.json projects.json teaching.json contact.json publications.json
+          git commit -F commit_msg.txt
+          git push
+          rm -f commit_msg.txt
+
+      - name: Basari yorumu + kapat
+        if: env.RESULT == 'ok'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Guncellendi.\n\n- Eski: ${process.env.OLD}\n- Yeni: ${process.env.NEW}\n- Dosya: ${process.env.FILE}\n\nSite bir dakika icinde yenilenir.`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: "closed"
+            });
+
+      - name: Bos yorum uyarisi
+        if: env.RESULT == 'empty'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Guncelleme icin `+"`alan: yeni deger`"+` satirlari yazin (her satirda bir alan). Bos biraktiklariniz korunur.`
+            });
+
+      - name: Eslesmedi yorumu
+        if: env.RESULT == 'nomatch'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Oge bulunamadi:\n\n${process.env.DESC}`
+            });

@@ -1,14 +1,17 @@
-name: Yayin Dropdownlarini Yenile
+name: Form Dropdownlarini Yenile
 
-# publications.json degisince ISSUE_TEMPLATE'lerdeki 'Degisecek yayin' /
-# 'Kaldirilacak yayin' dropdown option listesini yeniden uret -> commit.
-# Boylece hoca sil/duzelt formunu actiginda her zaman guncel listeyi gorur.
+# Herhangi bir JSON dosyasi (publications/books/projects/teaching) degisince,
+# ISSUE_TEMPLATE'lerdeki dropdown option listelerini otomatik yeniden uretir + commit.
+# Sonsuz dongu yok: bu workflow yalnizca .json degisince calisir ve ISSUE_TEMPLATE'erini degistirir.
 
 on:
   push:
     branches: [main]
     paths:
       - "publications.json"
+      - "books.json"
+      - "projects.json"
+      - "teaching.json"
 
 jobs:
   regen:
@@ -16,50 +19,71 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Kaynak kodu cikar
-        uses: actions/checkout@v4
-
-      - name: ISSUE_TEMPLATE dropdown optionlarini yenile
+      - uses: actions/checkout@v4
+      - name: Tum dropdown'lari yenile
         shell: python
         run: |
           import json, re
           from pathlib import Path
 
-          pubs = json.loads(Path("publications.json").read_text(encoding="utf-8"))
-          # Buyukten kucuge yil; icinde de JSON sirasinda
-          pubs_sorted = sorted(pubs, key=lambda p: p["year"], reverse=True)
-          options_lines = []
-          for p in pubs_sorted:
-              t = re.sub(r"\s+", " ", p["title"]).strip().replace('"', "'")
-              options_lines.append('        - "[%d] %s"' % (p["year"], t))
-          options_block = "\n".join(options_lines)
+          def fmt(s): return re.sub(r"\s+", " ", s.strip()).replace('"', "'")
+          def opt(s): return '        - "%s"' % s
 
-          # edit-publication.yml: dropdown block'u 'options:' ... 'description:'...' sonrasi
-          for tpl in ["edit-publication.yml", "delete-publication.yml"]:
-              f = Path(".github/ISSUE_TEMPLATE") / tpl
+          # publications -> [YYYY] Baslik
+          pubs = sorted(json.loads(Path("publications.json").read_text(encoding="utf-8")),
+                        key=lambda p: p["year"], reverse=True)
+          pub_opts = "\n".join(opt(f"[{p['year']}] {fmt(p['title'])}") for p in pubs)
+
+          # books / projects -> Baslik
+          books = json.loads(Path("books.json").read_text(encoding="utf-8"))
+          book_opts = "\n".join(opt(fmt(b["title"])) for b in books)
+          projects = json.loads(Path("projects.json").read_text(encoding="utf-8"))
+          proj_opts = "\n".join(opt(fmt(p["title"])) for p in projects)
+
+          # teaching -> 'Universite — Ders adi (Duzey)'
+          teaching = json.loads(Path("teaching.json").read_text(encoding="utf-8"))
+          teach_opts = "\n".join(
+              opt(f"{u['university']} — {fmt(c['name'])} ({c['level']})")
+              for u in teaching for c in u.get("courses", [])
+          )
+
+          def replace_options(tpl_path, dropdown_id, options_block):
+              f = Path(".github/ISSUE_TEMPLATE") / tpl_path
+              if not f.exists(): return False
               s = f.read_text(encoding="utf-8")
-              # mevcut options listesini (varsa) sil; 'options:' satirindan sonraki
-              # bosluk 8+/tire listesini yeni blok ile degistir.
-              # Yakin: '      options:\n        - "..."\n        - "..."\n  ...'
+              # dropdown block: 'options:\n        - "..."\n        - "..."\n' -> yeni
               new = re.sub(
-                  r"      options:\n(?:        - \"[^\"]*\"\n)+",
-                  "      options:\n" + options_block + "\n",
+                  r"(      options:\n)(?:        - \"[^\"]*\"\n)+",
+                  lambda m: m.group(1) + options_block + "\n",
                   s, count=1,
               )
-              if new == s:
-                  print("UYARI:", tpl, "options bulunamadi; degisiklik yok")
-              else:
-                  f.write_text(new, encoding="utf-8")
-                  print("OK:", tpl, "->", len(pubs_sorted), "option")
+              if new == s: return False
+              f.write_text(new, encoding="utf-8")
+              return True
 
-      - name: Commit + push (degisiklik varsa)
+          changes = []
+          # publications dropdowns
+          for t, did in [("delete-publication.yml", "title"), ("edit-publication.yml", "old_title")]:
+              if replace_options(t, did, pub_opts): changes.append(t)
+          # books dropdowns
+          for t, did in [("kitap-sil.yml", "title"), ("kitap-duzelt.yml", "old_title")]:
+              if replace_options(t, did, book_opts): changes.append(t)
+          # projects dropdowns
+          for t, did in [("proje-sil.yml", "title"), ("proje-duzelt.yml", "old_title")]:
+              if replace_options(t, did, proj_opts): changes.append(t)
+          # teaching dropdowns
+          for t, did in [("ders-sil.yml", "course"), ("ders-duzelt.yml", "old_course")]:
+              if replace_options(t, did, teach_opts): changes.append(t)
+
+          print("Guncellenen sablonlar:", changes)
+      - name: Commit + push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/ISSUE_TEMPLATE/edit-publication.yml .github/ISSUE_TEMPLATE/delete-publication.yml
+          git add .github/ISSUE_TEMPLATE/
           if git diff --staged --quiet; then
             echo "Degisiklik yok"
           else
-            git commit -m "Yayin dropdownlari yenilendi (otomatik)"
+            git commit -m "Form dropdown'lari yenilendi (otomatik)"
             git push
           fi

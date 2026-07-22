@@ -1,0 +1,25 @@
+name: "Proje Duzelt"
+description: "Mevcut bir projenin bilgilerini goster + duzelt. Bot once mevcut degerleri gosterir."
+title: "Proje Duzelt: <kisa baslik>"
+labels:
+  - "duzelt-proje"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bu form, var olan bir projeyi gunceller.
+
+        **Adim 1:** Asagidaki listeden duzeltmek istediginiz projeyi secin ve "Submit" yapin.
+        **Adim 2:** Bot, secili projenin mevcut tum bilgilerini (baslik, etiket, not, baglanti) yorum olarak gosterir.
+        **Adim 3:** O yoruma cevap olarak degistirmek istediginiz degerleri yazin.
+  - type: dropdown
+    id: old_title
+    attributes:
+      label: "Duzeltilecek proje"
+      description: "Mevcut projelerden birini secin."
+      options:
+        - "Informal Economics"
+        - "COVID-19 Economic Stimulus Index"
+        - "Jean Monnet Project"
+    validations:
+      required: true

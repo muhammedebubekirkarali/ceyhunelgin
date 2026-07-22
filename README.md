@@ -14,6 +14,7 @@ GitHub Issues formu doldurarak** tüm bölümler güncellenebilir.
 - Erişilebilir (skip-link, ARIA etiketleri, `prefers-reduced-motion`)
 - Yazdırma desteği
 - **Form doldurarak tüm içerik güncelleme** — GitHub Actions otomatik işler
+- **Düzeltme formunda dropdown + bot mevcut değerleri gösterir** — hoca yazmadan seçer, görerek düzeltir
 
 ## Dosya Yapısı
 
@@ -31,20 +32,22 @@ GitHub Issues formu doldurarak** tüm bölümler güncellenebilir.
 │   ├── favicon.svg
 │   └── photo.jpg       # Hero bölümündeki portre fotoğrafı
 └── .github/
-    ├── ISSUE_TEMPLATE/
-    │   ├── new-publication.yml    # "Yeni Yayın Ekle"
-    │   ├── delete-publication.yml # "Yayın Sil"
-    │   ├── edit-publication.yml   # "Yayın Düzelt"
-    │   ├── icerik-ekle.yml        # "İçerik Ekle" (kitap/proje/ders/iletişim)
-    │   ├── icerik-sil.yml         # "İçerik Sil" (kitap/proje/ders)
-    │   └── icerik-duzelt.yml      # "İçerik Düzelt" (kitap/proje/ders/iletişim)
+    ├── ISSUE_TEMPLATE/                 # 13 form (her tür + ekle/düzelt/sil)
+    │   ├── new-publication.yml         # "Yeni Yayın Ekle"
+    │   ├── delete-publication.yml      # "Yayın Sil" (dropdown)
+    │   ├── edit-publication.yml        # "Yayın Düzelt" (dropdown → bot göster)
+    │   ├── kitap-ekle.yml / kitap-sil.yml / kitap-duzelt.yml
+    │   ├── proje-ekle.yml / proje-sil.yml / proje-duzelt.yml
+    │   ├── ders-ekle.yml / ders-sil.yml / ders-duzelt.yml
+    │   └── iletisim-guncelle.yml
     └── workflows/
-        ├── add-publication.yml     # Issue → publications.json ekle
-        ├── delete-publication.yml  # Issue → publications.json sil
-        ├── edit-publication.yml    # Issue → publications.json guncelle
-        ├── icerik-ekle.yml         # Issue → ilgili JSON ekle
-        ├── icerik-sil.yml          # Issue → ilgili JSON sil
-        └── icerik-duzelt.yml       # Issue → ilgili JSON guncelle
+        ├── add-publication.yml         # Issue → publications.json ekle
+        ├── delete-publication.yml      # Issue → publications.json sil
+        ├── add-content.yml             # Issue → kitap/proje/ders ekle
+        ├── delete-content.yml          # Issue → kitap/proje/ders sil
+        ├── show-current.yml            # Issue açılınca mevcut değerleri göster
+        ├── apply-edit.yml              # Yorum → düzeltme uygula
+        └── regen-forms.yml             # JSON değişince dropdown'ları yenile
 ```
 
 ---
@@ -54,56 +57,72 @@ GitHub Issues formu doldurarak** tüm bölümler güncellenebilir.
 **Hiçbir dosyayı elle değiştirmenize gerek yok.** Tüm güncellemeler GitHub Issues
 üzerindeki form aracılığıyla yapılır; site otomatik güncellenir.
 
+### Formlar
+
+| Tür | Ekle | Düzelt | Sil |
+|---|---|---|---|
+| Yayın | **Yeni Yayın Ekle** | **Yayın Duzelt** | **Yayın Sil** |
+| Kitap | **Kitap Ekle** | **Kitap Duzelt** | **Kitap Sil** |
+| Proje | **Proje Ekle** | **Proje Duzelt** | **Proje Sil** |
+| Ders | **Ders Ekle** | **Ders Duzelt** | **Ders Sil** |
+| İletişim | — | **İletişim Güncelle** | — |
+
+> İletişim tek nesne olduğu için "Ekle/Sil" yerine tek "Güncelle" formu var.
+
 ### Yayın eklemek (en sık)
 
-1. Repo'nun GitHub sayfasında **Issues** → **New issue**.
-2. **"Yeni Yayin Ekle"** formunu seçin.
-3. Alanları doldurun: Yıl (zorunlu), Başlık (zorunlu), Yazarlar, Dergi/yayın bilgisi, DOI.
-4. **Submit** → Action `publications.json`'a ekler, siteyi günceller, issue'ya yanıt bırakır ve kapatır.
-5. Hatalı formda Action hatayı yorum olarak yazar.
+1. **Issues** → **New issue** → **"Yeni Yayın Ekle"**.
+2. Alanları doldurun: Yıl (zorunlu), Başlık (zorunlu), Yazarlar, Dergi/yayın bilgisi, DOI.
+3. **Submit** → Action `publications.json`'a ekler, siteyi günceller, issue'ya yanıt bırakır ve kapatır.
+4. Hatalı formda Action hatayı yorum olarak yazar.
 
-### Yayın düzeltmek
+### Yayın / kitap / proje / ders silmek
 
-1. **"Yayin Duzelt"** formu → **"Degisecek yayin"** açılır menüsünden ilgili yayını seçin (126 yayın, yıl+başlık sıralı; siteye otomatik senkron).
-2. Sonra istediğiniz yeni değerleri girin (yıl, başlık, yazarlar, dergi, DOI).
-   - Değiştirmek istemediğiniz alanları **boş bırakın** — mevcut değerler korunur.
-3. **Submit** → Action eski yayını bulup yeni değerlerle günceller; site yenilenir.
-4. Birden fazla başlık eşleşirse ("Shadow" gibi), Action "tam başlık yazın" uyarısı verir.
+1. İlgili **"Sil"** formu → **dropdown'dan** silinecek öğeyi seçin.
+2. **Submit** → Action JSON'dan çıkarır, site yenilenir.
+   - Ders silerken: son ders silinen üniversitenin kartı otomatik kalkar.
 
-### Yayın silmek
+### Kitap / proje / ders eklemek
 
-1. **"Yayin Sil"** formu → **"Kaldirilacak yayin"** açılır menüsünden seçin.
-2. Action seçilen yayını bulup JSON'dan çıkarır.
-
-> Açılır listedeki yayınlar `publications.json` değiştikçe **otomatik güncellenir** (regen-forms action). Formu açtığınızda liste güncel değilse sayfayı yeniden açın.
-
-### Kitap / Proje / Ders eklemek
-
-1. **"Icerik Ekle"** formu → "İçerik türü" açılır menüsünden `kitap`, `proje`, `ders` veya `iletisim` seçin.
-2. Sadece seçtiğiniz türle ilgili alanları doldurun (diğerleri boş kalabilir).
-   - **Kitap/Proje**: Başlık, Etiket, Not, Bağlantı, Bağlantı metni.
+1. İlgili **"Ekle"** formu → alanları doldurun.
    - **Ders**: Üniversite, Ders adı, Düzey (B.A./M.A./Ph.D.). Üniversite yeni ise yeni kart oluşturur; varsa o üniversiteye ekler.
-   - **İletişim**: Tüm iletişim bölümünü girdiklerinizle **değiştirir** (ek değil). Mail'leri `|` ile ayırın; dış linkleri her satıra bir tane `URL|Etiket` biçiminde yazın.
-3. **Submit** → ilgili JSON güncellenir, site yenilenir.
+2. **Submit** → ilgili JSON güncellenir, site yenilenir.
 
-### Kitap / Proje / Ders / İletişim düzeltmek
+### Yayın / kitap / proje / ders DÜZELTMEK (bot gösterir → hoca düzeltir)
 
-1. **"Icerik Duzelt"** formu → türü seçin.
-   - **Kitap/Proje**: mevcut tam adı yazın → yeni değerleri gir (boş alanlar korunur).
-   - **Ders**: üniversite, mevcut ders adı → yeni ad veya düzey (boş ise korunur).
-   - **İletişim**: tüm değerleri girdiklerinizle değiştirir (boş alanlar boş kalır).
-2. Birden fazla eşleşmede "tam ad yazın" uyarısı gelir.
+Bu, en güçlü akıştır. Hoca yazmadan seçer, mevcut değerleri görür, gördüğünü düzeltir:
 
-### Kitap / Proje / Ders silmek
+1. **"Yayın Duzelt"** (veya kitap/proje/ders karşılığı) formu → **dropdown'dan** düzeltilecek öğeyi seçin → **Submit**.
+2. **Bot, 1 dakika içinde bir yorum yazar:** seçili öğenin **mevcut tüm değerlerini** gösterir (örn. `yıl: 2020`, `başlık: Shadow Economies...`, `yazarlar: ...`, `dergi: ...`, `doi: ...`).
+3. Hoca, o yoruma **cevap olarak** yalnızca değiştirmek istediği alanları yazar:
+   ```
+   yazarlar: Adem Y. Elveren and Eric Budd
+   dergi: Journal of International Development, 60, 55-80.
+   ```
+   Boş bırakılan alanlar **korunur**. Format: `alan: yeni değer` (her satırda bir alan).
+4. Bot, yorumu algılar, JSON'u günceller, siteyi yeniler, issue'yu kapatır.
+5. Yorum boşsa bot "alan: yeni değer yazın" hatırlatması yapar; issue açık kalır, tekrar yazabilirsiniz.
 
-1. **"Icerik Sil"** formu → tür seçin → kaldırılacak öğenin tam adını yazın.
-   - Ders silerken üniversite adını da yazın (hangi üniversiteden silineceğini belirler).
-2. Action eşleşen öğeyi bulup JSON'dan çıkarır. Bir üniversitenin son dersi silinirse üniversite kartı da otomatik kalkar.
+**Alan adları** (her tür için):
+- Yayın: `yıl`, `başlık`, `yazarlar`, `dergi`, `doi`
+- Kitap/Proje: `başlık`, `etiket`, `not`, `bağlantı`, `bağlantı_metni`
+- Ders: `üniversite`, `ders_adı`, `düzey` (B.A./M.A./Ph.D.)
+- İletişim: `eposta` (`|` ile ayrı), `telefon`, `dis_linkler` (her satıra `URL | Etiket`)
 
+### İletişim güncellemek
+
+1. **"İletişim Güncelle"** → **Submit** (formda alan yok; hemen gönderin).
+2. Bot, mevcut iletişimi yorumla gösterir.
+3. Yoruma cevap olarak değiştirmek istediğiniz alanları yazın.
+   - `dis_linkler: sil` yazarsanız tüm dış linkler boşalır.
 
 ### Fotoğrafı değiştirme
 
 `assets/photo.jpg` dosyasını aynı isimle değiştirin (GitHub web arayüzünden veya push ile). Önerilen: kareye yakın, ~512×512 px ve üzeri.
+
+### Dropdown'lar otomatik güncellenir
+
+Her JSON değiştiğinde `regen-forms.yml` workflow'u tüm sil/düzelt formlarındaki dropdown listelerini yeniden üretir. Yeni yayın/kitap/ders eklediğinizde veya sildiğinizde, ilgili formlar bir sonraki açılışta güncel listeyi gösterir.
 
 ---
 

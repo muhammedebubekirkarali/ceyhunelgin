@@ -1,0 +1,189 @@
+name: Mevcut Degerleri Goster
+
+# Issue acilinca: etiket (duzelt-* veya guncelle-iletisim) hangi turse o turun
+# mevcut degerlerini bot yorum ile gosterir. Hoca sonraki adimda bu yoruma
+# cevap yazarak degisiklikleri belirtir (apply-edit.yml tarafindan islenir).
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  show:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mevcut degerleri goster
+        shell: python
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          import json, os, re, sys
+          from pathlib import Path
+          body = os.environ["ISSUE_BODY"].replace("\\(", "(").replace("\\)", ")")
+          labels = os.environ["ISSUE_LABELS"].split(",")
+          gh = Path(os.environ["GITHUB_ENV"])
+          A = gh.open("a")
+
+          def env(k, v):
+              v = str(v).replace("\n", " ").replace("\r", " ")
+              A.write(f"{k}={v}\n")
+
+          _cevir = str.maketrans({"ğ":"g","Ğ":"g","ı":"i","İ":"i","ö":"o","Ö":"o","ü":"u","Ü":"u","ş":"s","Ş":"s","ç":"c","Ç":"c"})
+          def norm(s):
+              return re.sub(r"\s+", " ", s.strip().translate(_cevir)).lower()
+
+          def fv(label):
+              marker = "### " + label
+              i = body.find(marker)
+              if i < 0:
+                  return ""
+              started = False
+              vlines = []
+              for ln in body[i+len(marker):].split("\n")[1:]:
+                  if ln.startswith("### "):
+                      break
+                  if not started:
+                      if ln.strip() == "":
+                          continue
+                      started = True
+                      vlines.append(ln)
+                  else:
+                      vlines.append(ln)
+              while vlines and vlines[-1].strip() == "":
+                  vlines.pop()
+              v = "\n".join(vlines).strip()
+              return "" if v in ("", "_No response_") else v
+
+          def publish(comment_lines, kind):
+              env("RESULT", "ok")
+              env("COMMENT", "\n".join(comment_lines))
+              env("KIND", kind)
+
+          if "duzelt-yayin" in labels:
+              v = fv("Duzeltilecek yayin")
+              title = re.sub(r"^\[\d{4}\]\s*", "", v).strip()
+              pubs = json.loads(Path("publications.json").read_text(encoding="utf-8"))
+              nt = norm(title)
+              m = next((p for p in pubs if norm(p["title"]) == nt), None)
+              if not m:
+                  m = next((p for p in pubs if nt in norm(p["title"]) or norm(p["title"]) in nt), None)
+              if not m:
+                  env("RESULT", "nomatch"); env("DESC", title); env("KIND", "yayin"); sys.exit(0)
+              publish([
+                  "**Yayinin mevcut degerleri:**", "", "```",
+                  f"yil: {m['year']}",
+                  f"baslik: {m['title']}",
+                  f"yazarlar: {m.get('authors') or '(yok)'}",
+                  f"dergi: {m.get('venue') or '(yok)'}",
+                  f"doi: {m.get('doi') or '(yok)'}",
+                  "```", "",
+                  "Degistirmek istediginiz alanlari **bu yoruma cevap olarak** yazin.",
+                  "Format: `alan: yeni deger` (her satirda bir alan). Bos biraktiklariniz korunur.",
+                  "Alanlar: yil, baslik, yazarlar, dergi, doi",
+              ], "yayin")
+
+          elif "duzelt-kitap" in labels or "duzelt-proje" in labels:
+              is_book = "duzelt-kitap" in labels
+              fn = "books.json" if is_book else "projects.json"
+              kind = "kitap" if is_book else "proje"
+              v = fv("Duzeltilecek " + kind)
+              title = re.sub(r"^\[\d{4}\]\s*", "", v).strip() if v.startswith("[") else v.strip()
+              data = json.loads(Path(fn).read_text(encoding="utf-8"))
+              nt = norm(title)
+              m = next((it for it in data if norm(it["title"]) == nt), None)
+              if not m:
+                  m = next((it for it in data if nt in norm(it["title"]) or norm(it["title"]) in nt), None)
+              if not m:
+                  env("RESULT", "nomatch"); env("DESC", title); env("KIND", kind); sys.exit(0)
+              publish([
+                  f"**{kind.capitalize()} mevcut degerleri:**", "", "```",
+                  f"baslik: {m['title']}",
+                  f"etiket: {m.get('label') or '(yok)'}",
+                  f"not: {m.get('note') or '(yok)'}",
+                  f"baglanti: {m.get('link') or '(yok)'}",
+                  f"baglanti_metni: {m.get('link_label') or '(yok)'}",
+                  "```", "",
+                  "Degistirmek istediginiz alanlari **bu yoruma cevap olarak** yazin.",
+                  "Format: `alan: yeni deger` (her satirda bir alan). Bos biraktiklariniz korunur.",
+                  f"Alanlar: baslik, etiket, not, baglanti, baglanti_metni",
+              ], kind)
+
+          elif "duzelt-ders" in labels:
+              v = fv("Duzeltilecek ders")
+              # format: 'Universite — Ders adi (Duzey)'
+              parts = re.split(r"\s+—\s+", v, maxsplit=1)
+              uni = parts[0].strip()
+              rest = parts[1] if len(parts) > 1 else ""
+              m_lev = re.search(r"\(([^)]+)\)\s*$", rest)
+              level = m_lev.group(1) if m_lev else ""
+              course = re.sub(r"\s*\([^)]+\)\s*$", "", rest).strip()
+              data = json.loads(Path("teaching.json").read_text(encoding="utf-8"))
+              found_u = next((u for u in data if norm(u["university"]) == norm(uni)), None)
+              match = None
+              if found_u:
+                  mf = next((c for c in found_u["courses"] if norm(c["name"]) == norm(course)), None)
+                  if mf:
+                      match = (found_u, mf)
+              if not match:
+                  env("RESULT", "nomatch"); env("DESC", v); env("KIND", "ders"); sys.exit(0)
+              u, c = match
+              publish([
+                  "**Dersin mevcut degerleri:**", "", "```",
+                  f"universite: {u['university']}",
+                  f"digers_adi: {c['name']}",
+                  f"duzey: {c['level']}",
+                  "```", "",
+                  "Degistirmek istediginiz alanlari **bu yoruma cevap olarak** yazin.",
+                  "Format: `alan: yeni deger` (her satirda bir alan). Bos biraktiklariniz korunur.",
+                  "Alanlar: universite, ders_adi, duzey (duzey: B.A. / M.A. / Ph.D.)",
+              ], "ders")
+
+          elif "guncelle-iletisim" in labels:
+              d = json.loads(Path("contact.json").read_text(encoding="utf-8"))
+              lines = ["**Iletisim mevcut degerleri:**", "", "```"]
+              lines.append(f"eposta: {' | '.join(d.get('mails') or [])}")
+              lines.append(f"telefon: {d.get('phone_display') or d.get('phone') or '(yok)'}")
+              lines.append("dis_linkler:")
+              for l in (d.get("links") or []):
+                  lines.append(f"- {l['url']} | {l['label']}")
+              lines += ["", "```",
+                  "Degistirmek istediginiz alanlari **bu yoruma cevap olarak** yazin.",
+                  "Format: `alan: yeni deger` (her satirda bir alan). Bos biraktiklariniz korunur.",
+                  "Alanlar: eposta, telefon, dis_linkler",
+                  "dis_linkler: her satirda 'URL | Etiket'; 'sil' yazarsaniz dis linkler bosalir.", ""]
+              env("RESULT", "ok")
+              env("COMMENT", "\n".join(lines))
+              env("KIND", "iletisim")
+
+          else:
+              sys.exit(0)
+      - name: Bot yorumu
+        if: env.RESULT == 'ok'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: process.env.COMMENT
+            });
+      - name: Eslesmedi + kapat
+        if: env.RESULT == 'nomatch'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Oge bulunamadi:\n\n${process.env.DESC}\n\nListeden gecerli bir oge secin.`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: "closed", labels: ["eslesmedi"]
+            });
