@@ -23,7 +23,7 @@ function toast(msg, kind='ok') {
 }
 
 function persist() {
-  try { localStorage.setItem('ceyhunelgin-admin', JSON.stringify({token:state.token, repo:state.repo, branch:state.branch})); } catch(e){}
+  try { localStorage.setItem('ceyhunelgin-admin', JSON.stringify({token:state.token})); } catch(e){}
 }
 function restore() {
   try { const v = JSON.parse(localStorage.getItem('ceyhunelgin-admin')||'{}'); return v; } catch(e){ return {}; }
@@ -71,16 +71,38 @@ async function refreshSha(filename) {
 }
 
 // ---------- Giris ----------
+// Repo+dal otomatik: URL'den /kullanici/github.io deseni veya /<repo>/ alti
+// tespit edilir; hocanin ellemesine gerek yok. Fallback sabit altta.
+function detectRepo() {
+  // https://KULLANICI.github.io/REPO/admin/ -> KULLANICI/REPO
+  // https://alan.com/admin/ -> KULLANICI/REPO ( DOMAIN.const.REPO )
+  const m = location.host.match(/^([a-z0-9-]+)\.github\.io$/i);
+  if (m) {
+    // pathname: /REPO/admin/ veya /REPO/ veya /admin/ (kullanicinin kullanici.github.io reposu)
+    const m2 = location.pathname.replace(/\/admin\/?$/,'').replace(/\/$/,'').match(/^\/([^/]+)/);
+    if (m2 && m2[1] !== 'admin') return m[1] + '/' + m2[1];
+    // kullanici.github.io reposunun kendisi (kullanici/kullanici.github.io)
+    return m[1] + '/' + m[1] + '.github.io';
+  }
+  // ozel alan adi: sabit konfigurasyon (asagidaki REPO'yu degistirin)
+  return 'ceyhunelgin/ceyhunelgin';
+}
+const AUTO_BRANCH = 'main';
+
 $('btn-login').addEventListener('click', async () => {
-  const repo = $('i-repo').value.trim();
-  const branch = $('i-branch').value.trim() || 'main';
   const token = $('i-token').value.trim();
-  if (!repo || !token) { showErr('Depo ve token gerekli.'); return; }
-  state = { token, repo, branch, user:null, cache:{} };
+  if (!token) { showErr('Token gerekli.'); return; }
+  const repo = detectRepo();
+  state = { token, repo, branch: AUTO_BRANCH, user:null, cache:{} };
   try {
     const u = await fetch(`${API}/user`, { headers: { Authorization:`Bearer ${token}`, Accept:'application/vnd.github+json' }});
     if (!u.ok) throw new Error('Token geçersiz.');
     state.user = await u.json();
+    // erisim kontrolu: repo'yu okuyabiliyor mu?
+    try {
+      const rr = await fetch(`${API}/repos/${repo}`, { headers: { Authorization:`Bearer ${token}`, Accept:'application/vnd.github+json' }});
+      if (!rr.ok) throw new Error(`Bu token ${repo} deposuna erişemiyor. Token'a 'repo' yetkisi verildiğinden emin olun.`);
+    } catch(e) { throw e; }
     persist();
     $('login-err').classList.add('hidden');
     enterPanel();
@@ -353,8 +375,8 @@ window.addRec = addRec;
 // Otomatik giris (kayıtlıysa)
 (function init(){
   const s = restore();
-  if (s.token && s.repo) {
-    $('i-repo').value = s.repo; $('i-branch').value = s.branch || 'main'; $('i-token').value = s.token;
+  if (s.token) {
+    $('i-token').value = s.token;
     $('btn-login').click();
   }
 })();

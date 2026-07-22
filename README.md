@@ -55,21 +55,18 @@ tarayıcıdaki yönetim panelinden** tüm bölümler güncellenebilir.
 
 ### 2. Giriş (yalnız bir kez)
 
-Panele girmek için:
+Panele girmek için yalnızca bir **Personal Access Token** gerekir; depo/dal
+otomatik tespit edilir (panelin açıldığı URL'den):
 
-1. **GitHub deposu**: `kullanıcı/repo` biçiminde (örn `ceyhunelgin/ceyhunelgin`).
-2. **Dal**: genelde `main`.
-3. **Personal Access Token**: GitHub → Settings → Developer settings →
-   Personal access tokens (classic) → **Generate new token (classic)** →
-   açıklama `ceyhunelgin-panel`, süre örn. 90 gün, **`repo`** yetkisi → Generate.
-   Token'ı kopyalayın (`ghp_...`).
-4. Panele yapıştırın → **Giriş**.
-5. Token tarayıcınızın `localStorage`'ında saklanır; hiçbir sunucudan geçmez.
+1. GitHub → Settings → Developer settings → Personal access tokens (classic) →
+   **Generate new token (classic)** → açıklama `ceyhunelgin-panel`, süre örn. 90 gün,
+   **`repo`** yetkisi → Generate. Token'ı kopyalayın (`ghp_...`).
+2. Panele yapıştırın → **Giriş**.
+3. Token tarayıcınızın `localStorage`'ında saklanır; hiçbir sunucudan geçmez.
    Sayfa yeniden açınca otomatik giriş yapar. Çıkış yapıldığında silinir.
 
 > Güvenlik: token `repo` yetkisine sahiptir; kimseyle paylaşılmamalı. Panel
-> yalnızca sizin tarafınızdan bilinen URL'de durur. Token'ı kopyaladıktan sonra
-> GitHub sekmesini kapatabilirsiniz.
+> yalnızca sizin tarafınızdan bilinen URL'de durur.
 
 ### 3. Bölümler (sekmeler)
 
