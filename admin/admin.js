@@ -17,9 +17,10 @@ let state = { token:'', repo:'', branch:'', user:null, cache:{} }; // cache: {fi
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+let toastTimer;
 function toast(msg, kind='ok') {
   const t = $('toast'); t.textContent = msg; t.className = 'toast show '+kind;
-  setTimeout(()=> t.className='toast', 3000);
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=> t.className='toast', 3000);
 }
 
 function persist() {
@@ -41,7 +42,9 @@ async function loadFile(filename) {
   if (state.cache[filename]) return state.cache[filename];
   const meta = await gh(filename);
   if (!meta) { state.cache[filename] = { data: null, sha: null }; return state.cache[filename]; }
-  const data = JSON.parse(atob(meta.content.replace(/\n/g,'')));
+  // atob latin1 string verir; Turkce/UTF-8 icin decode et (K1)
+  const bin = atob(meta.content.replace(/\n/g, ''));
+  const data = JSON.parse(decodeURIComponent(escape(bin)));
   state.cache[filename] = { data, sha: meta.sha };
   return state.cache[filename];
 }
@@ -58,16 +61,16 @@ async function saveFile(filename, data) {
     method: 'PUT', headers: { Authorization: `Bearer ${state.token}`, Accept:'application/vnd.github+json' },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`Commit başarısız: ${r.status} ${await r.text()}`);
+  if (!r.ok) {
+    const detail = await r.text();
+    if (r.status === 409) { state.cache[filename] = null; throw new Error('Dosya başkası tarafından değiştirilmiş. Sayfayı yenileyip tekrar deneyin.'); }
+    if (r.status === 401 || r.status === 403) { state.cache[filename] = null; throw new Error('Token geçersiz veya süresi dolmuş. Çıkış yapıp yeniden giriş yapın.'); }
+    if (r.status === 404) { state.cache[filename] = null; throw new Error(`Dosya bulunamadı (${filename}). Depo/dal doğru mu?`); }
+    throw new Error(`Commit başarısız: ${r.status} ${detail.slice(0,200)}`);
+  }
   const res = await r.json();
   state.cache[filename] = { data, sha: res.content.sha };
   return res;
-}
-
-// cache'i bertaraf et: her save'den once yeniden sha'yi cek
-async function refreshSha(filename) {
-  const meta = await gh(filename);
-  if (meta) state.cache[filename] = { data: state.cache[filename]?.data ?? JSON.parse(atob(meta.content.replace(/\n/g,''))), sha: meta.sha };
 }
 
 // ---------- Giris ----------
@@ -84,8 +87,8 @@ function detectRepo() {
     // kullanici.github.io reposunun kendisi (kullanici/kullanici.github.io)
     return m[1] + '/' + m[1] + '.github.io';
   }
-  // ozel alan adi: sabit konfigurasyon (asagidaki REPO'yu degistirin)
-  return 'ceyhunelgin/ceyhunelgin';
+  // ozel alan adi: sabit konfigurasyon (hocanin gercek deposeri)
+  return 'muhammedebubekirkarali/ceyhunelgin';
 }
 const AUTO_BRANCH = 'main';
 
@@ -106,7 +109,13 @@ $('btn-login').addEventListener('click', async () => {
     persist();
     $('login-err').classList.add('hidden');
     enterPanel();
-  } catch (e) { showErr(e.message); }
+  } catch (e) {
+    // token gecersizse/kapasitesi yoksa saklanan token'i temizle (otomatik giris dongusunu kir)
+    if (e.message.includes('geçersiz') || e.message.includes('erişemiyor')) {
+      localStorage.removeItem('ceyhunelgin-admin');
+    }
+    showErr(e.message);
+  }
 });
 function showErr(m) { const el = $('login-err'); el.textContent = m; el.classList.remove('hidden'); }
 
@@ -135,11 +144,16 @@ function switchTab(tab) {
 
 // ---------- Tab: Yayinlar ----------
 async function renderTab(tab) {
-  const f = FILES[tab];
-  const c = await loadFile(f);
-  const data = c.data || [];
-  if (tab === 'contact') return renderContact(c.data || {});
-  renderListTab(tab, data);
+  const container = $(`tab-${tab}`);
+  try {
+    const f = FILES[tab];
+    const c = await loadFile(f);
+    const data = c.data || [];
+    if (tab === 'contact') return renderContact(c.data || {});
+    renderListTab(tab, data);
+  } catch (e) {
+    container.innerHTML = `<div class="card"><p style="color:var(--err)">Yüklenemedi: ${esc(e.message)}</p></div>`;
+  }
 }
 
 function renderListTab(tab, data) {
@@ -172,7 +186,7 @@ function addForm(tab) {
     <label>Yazarlar (opsiyonel)</label><input id="add-pubs-authors" placeholder="Adem Y. Elveren and Eric Budd">
     <label>Dergi / yayin bilgisi (opsiyonel)</label><input id="add-pubs-venue" placeholder="Journal of ..., 60, 55-80.">
     <label>DOI / Kaynak Baglantisi (opsiyonel)</label><input id="add-pubs-doi" placeholder="https://doi.org/...">
-    <div class="save-bar"><button onclick="addRec('pubs')">Ekle</button><span class="stat" id="addstat-pubs"></span></div>`;
+    <div class="save-bar"><button onclick="addRec('pubs')">Ekle</button></div>`;
   if (tab === 'books' || tab === 'projects') {
     const isBook = tab==='books';
     return `
@@ -216,7 +230,6 @@ async function addRec(tab) {
     }
     await saveFile(f, data);
     toast('Eklendi.');
-    state.cache[f] = null; await loadFile(f);
     renderTab(tab);
   } catch (e) { toast('Hata: ' + e.message, 'err'); }
 }
@@ -272,10 +285,13 @@ window.savePubs = async function() {
   try {
     const f = FILES.pubs; const c = await loadFile(f); const data = c.data; const sel = $('sel-pubs');
     const i = parseInt(sel.value);
-    data[i] = { year: parseInt($('ed-year').value), title: $('ed-title').value.trim(), authors: edval('ed-authors'), venue: edval('ed-venue'), doi: edval('ed-doi') };
+    const year = parseInt($('ed-year').value, 10);
+    const title = $('ed-title').value.trim();
+    if (!year || !title) throw new Error('Yıl ve başlık gerekli.');
+    data[i] = { year, title, authors: edval('ed-authors'), venue: edval('ed-venue'), doi: edval('ed-doi') };
     data.sort((a,b)=>b.year-a.year);
     await saveFile(f, data);
-    toast('Kaydedildi.'); state.cache[f]=null; await loadFile(f); renderTab('pubs');
+    toast('Kaydedildi.'); renderTab('pubs');
   } catch(e){ toast('Hata: '+e.message,'err'); }
 };
 window.delPubs = async function() {
@@ -284,15 +300,17 @@ window.delPubs = async function() {
     const f = FILES.pubs; const c = await loadFile(f); const data = c.data; const i = parseInt($('sel-pubs').value);
     data.splice(i,1);
     await saveFile(f, data);
-    toast('Silindi.'); state.cache[f]=null; await loadFile(f); renderTab('pubs');
+    toast('Silindi.'); renderTab('pubs');
   } catch(e){ toast('Hata: '+e.message,'err'); }
 };
 window.saveCard = async function(tab) {
   try {
     const f = FILES[tab]; const c = await loadFile(f); const data = c.data; const i = parseInt($(`sel-${tab}`).value);
-    data[i] = { title: $('ed-title').value.trim(), label: edval('ed-label'), note: edval('ed-note'), link: edval('ed-link'), link_label: edval('ed-linklabel') };
+    const title = $('ed-title').value.trim();
+    if (!title) throw new Error('Başlık gerekli.');
+    data[i] = { title, label: edval('ed-label'), note: edval('ed-note'), link: edval('ed-link'), link_label: edval('ed-linklabel') };
     await saveFile(f, data);
-    toast('Kaydedildi.'); state.cache[f]=null; await loadFile(f); renderTab(tab);
+    toast('Kaydedildi.'); renderTab(tab);
   } catch(e){ toast('Hata: '+e.message,'err'); }
 };
 window.delCard = async function(tab) {
@@ -301,7 +319,7 @@ window.delCard = async function(tab) {
     const f = FILES[tab]; const c = await loadFile(f); const data = c.data; const i = parseInt($(`sel-${tab}`).value);
     data.splice(i,1);
     await saveFile(f, data);
-    toast('Silindi.'); state.cache[f]=null; await loadFile(f); renderTab(tab);
+    toast('Silindi.'); renderTab(tab);
   } catch(e){ toast('Hata: '+e.message,'err'); }
 };
 window.saveTeaching = async function(ui, ci) {
@@ -310,17 +328,21 @@ window.saveTeaching = async function(ui, ci) {
     const uni = $('ed-uni').value.trim();
     const name = $('ed-name').value.trim();
     const level = $('ed-level').value;
+    if (!uni || !name) throw new Error('Üniversite ve ders adı gerekli.');
     // eski ders cikar
     const oldU = data[ui]; const oldC = oldU.courses[ci];
     oldU.courses.splice(ci, 1);
     // universite degisti mi?
     let target = data.find(d => d.university.toLowerCase() === uni.toLowerCase());
-    if (!target) { target = { university: uni, courses: [] }; data.push(target); }
+    if (!target || target === oldU) { // ayni uni geri ekle ya da yeni olustur
+      if (!target) { target = { university: uni, courses: [] }; data.push(target); }
+      else { target = oldU; }
+    }
     target.courses.push({ name, level });
     // eski universitede ders kalmadiysa kaldir
-    if (!oldU.courses.length) { const idx = data.indexOf(oldU); if (idx>=0) data.splice(idx,1); }
+    if (oldU !== target && !oldU.courses.length) { const idx = data.indexOf(oldU); if (idx>=0) data.splice(idx,1); }
     await saveFile(f, data);
-    toast('Kaydedildi.'); state.cache[f]=null; await loadFile(f); renderTab('teaching');
+    toast('Kaydedildi.'); renderTab('teaching');
   } catch(e){ toast('Hata: '+e.message,'err'); }
 };
 window.delTeaching = async function(ui, ci) {
@@ -330,7 +352,7 @@ window.delTeaching = async function(ui, ci) {
     const u = data[ui]; u.courses.splice(ci, 1);
     if (!u.courses.length) { data.splice(ui, 1); }
     await saveFile(f, data);
-    toast('Silindi.'); state.cache[f]=null; await loadFile(f); renderTab('teaching');
+    toast('Silindi.'); renderTab('teaching');
   } catch(e){ toast('Hata: '+e.message,'err'); }
 };
 function edval(id){ const v = $(id).value.trim(); return v || null; }
@@ -365,7 +387,7 @@ window.saveContact = async function() {
     });
     data = { mails, phone, phone_display: phoneDisp||null, links };
     await saveFile(f, data);
-    toast('Kaydedildi.'); state.cache[f]=null; await loadFile(f); renderTab('contact');
+    toast('Kaydedildi.'); renderTab('contact');
   } catch(e){ toast('Hata: '+e.message,'err'); }
 };
 
