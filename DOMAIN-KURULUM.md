@@ -73,6 +73,11 @@ git push
 Bu noktada site yayında. Sıradaki adımlar yalnızca `ceyhunelgin.com` alan adına
 bağlamak isteniyorsa gerekli.
 
+> **Yönetim paneli:** Site yayında olduktan sonra, içeriği güncellemek için
+> `https://KULLANICI.github.io/ceyhunelgin/admin/` (veya `https://ceyhunelgin.com/admin/`)
+> adresini tarayıcıda açın. Giriş için bir GitHub Personal Access Token gerekir
+> (`repo` yetkili) — ayrıntılar `README.md` "İçerik Güncelleme" bölümünde.
+
 ---
 
 ## Bölüm 4 — `ceyhunelgin.com` Alan Adını GitHub'a Bağlama
