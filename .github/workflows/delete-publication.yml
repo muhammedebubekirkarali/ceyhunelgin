@@ -55,7 +55,10 @@ jobs:
                   return ""
               return val
 
-          title = field("Kaldirilacak yayinin tam basligi").strip()
+          raw_title = field("Kaldirilacak yayin").strip()
+          # dropdown degeri '[YYYY] Baslik' formatinda; on eki soy
+          raw_title = re.sub(r"^\[\d{4}\]\s*", "", raw_title).strip()
+          title = raw_title
           if not title:
               with open(os.environ["GITHUB_ENV"], "a") as _e:
                   _e.write("RESULT=error\nMESSAGE=Baslik bos.\n")

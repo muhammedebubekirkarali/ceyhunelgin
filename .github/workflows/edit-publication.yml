@@ -60,7 +60,9 @@ jobs:
           def maybe(s):
               return s.strip() or None
 
-          old_title = field("Degisecek yayinin tam basligi (simdiki)").strip()
+          raw_old = field("Degisecek yayin").strip()
+          # dropdown degeri '[YYYY] Baslik' formatinda; on eki soy
+          old_title = re.sub(r"^\[\d{4}\]\s*", "", raw_old).strip()
           if not old_title:
               env("RESULT", "error"); env("MESSAGE", "Degisecek baslik bos."); sys.exit(0)
 

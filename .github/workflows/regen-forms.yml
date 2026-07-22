@@ -1,0 +1,65 @@
+name: Yayin Dropdownlarini Yenile
+
+# publications.json degisince ISSUE_TEMPLATE'lerdeki 'Degisecek yayin' /
+# 'Kaldirilacak yayin' dropdown option listesini yeniden uret -> commit.
+# Boylece hoca sil/duzelt formunu actiginda her zaman guncel listeyi gorur.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "publications.json"
+
+jobs:
+  regen:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Kaynak kodu cikar
+        uses: actions/checkout@v4
+
+      - name: ISSUE_TEMPLATE dropdown optionlarini yenile
+        shell: python
+        run: |
+          import json, re
+          from pathlib import Path
+
+          pubs = json.loads(Path("publications.json").read_text(encoding="utf-8"))
+          # Buyukten kucuge yil; icinde de JSON sirasinda
+          pubs_sorted = sorted(pubs, key=lambda p: p["year"], reverse=True)
+          options_lines = []
+          for p in pubs_sorted:
+              t = re.sub(r"\s+", " ", p["title"]).strip().replace('"', "'")
+              options_lines.append('        - "[%d] %s"' % (p["year"], t))
+          options_block = "\n".join(options_lines)
+
+          # edit-publication.yml: dropdown block'u 'options:' ... 'description:'...' sonrasi
+          for tpl in ["edit-publication.yml", "delete-publication.yml"]:
+              f = Path(".github/ISSUE_TEMPLATE") / tpl
+              s = f.read_text(encoding="utf-8")
+              # mevcut options listesini (varsa) sil; 'options:' satirindan sonraki
+              # bosluk 8+/tire listesini yeni blok ile degistir.
+              # Yakin: '      options:\n        - "..."\n        - "..."\n  ...'
+              new = re.sub(
+                  r"      options:\n(?:        - \"[^\"]*\"\n)+",
+                  "      options:\n" + options_block + "\n",
+                  s, count=1,
+              )
+              if new == s:
+                  print("UYARI:", tpl, "options bulunamadi; degisiklik yok")
+              else:
+                  f.write_text(new, encoding="utf-8")
+                  print("OK:", tpl, "->", len(pubs_sorted), "option")
+
+      - name: Commit + push (degisiklik varsa)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/ISSUE_TEMPLATE/edit-publication.yml .github/ISSUE_TEMPLATE/delete-publication.yml
+          if git diff --staged --quiet; then
+            echo "Degisiklik yok"
+          else
+            git commit -m "Yayin dropdownlari yenilendi (otomatik)"
+            git push
+          fi

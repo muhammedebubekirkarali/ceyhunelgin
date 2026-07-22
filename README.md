@@ -64,7 +64,7 @@ GitHub Issues formu doldurarak** tüm bölümler güncellenebilir.
 
 ### Yayın düzeltmek
 
-1. **"Yayin Duzelt"** formu → önce **düzenlenecek yayının tam başlığını** yazın (simdiki adı).
+1. **"Yayin Duzelt"** formu → **"Degisecek yayin"** açılır menüsünden ilgili yayını seçin (126 yayın, yıl+başlık sıralı; siteye otomatik senkron).
 2. Sonra istediğiniz yeni değerleri girin (yıl, başlık, yazarlar, dergi, DOI).
    - Değiştirmek istemediğiniz alanları **boş bırakın** — mevcut değerler korunur.
 3. **Submit** → Action eski yayını bulup yeni değerlerle günceller; site yenilenir.
@@ -72,8 +72,10 @@ GitHub Issues formu doldurarak** tüm bölümler güncellenebilir.
 
 ### Yayın silmek
 
-1. **"Yayin Sil"** formu → yayının **tam başlığını** yazın.
-2. Action başlığa göre bulup JSON'dan çıkarır. Büyük/küçük harf, baş/son boşluk ve Türkçe karakter (`ğ↔g`, `ı↔i` vb.) duyarsız eşleşir.
+1. **"Yayin Sil"** formu → **"Kaldirilacak yayin"** açılır menüsünden seçin.
+2. Action seçilen yayını bulup JSON'dan çıkarır.
+
+> Açılır listedeki yayınlar `publications.json` değiştikçe **otomatik güncellenir** (regen-forms action). Formu açtığınızda liste güncel değilse sayfayı yeniden açın.
 
 ### Kitap / Proje / Ders eklemek
 
