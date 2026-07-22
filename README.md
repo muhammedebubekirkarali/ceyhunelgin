@@ -1,119 +1,99 @@
 # Ceyhun Elgin — Akademik Kişisel Web Sitesi
 
 Tek sayfalık, dış bağımlılığı olmayan (framework kullanmayan) statik web sitesi.
-Sadece `index.html`, `css/style.css`, `js/main.js` ve `assets/` klasöründen oluşur.
+Yayınlar `publications.json` dosyasından otomatik yüklenir; site GitHub Pages'de
+ücretsiz yayında kalır. Kod bilmeden, **form doldurarak** içerik güncellenebilir.
 
 ## Özellikler
 
-- Türkçe / İngilizce dil desteği (tek tıkla geçiş, tarayıcı ve URL üzerinden otomatik)
+- Türkçe / İngilizce dil desteği (tek tıkla geçiş, tarayıcı ve URL ile otomatik)
 - Açık / koyu tema (sistem tercihini takip eder, `localStorage`'da hatırlanır)
 - Mobil uyumlu (responsive)
 - Yayınlar arasında canlı arama / filtreleme
 - Erişilebilir (skip-link, ARIA etiketleri, `prefers-reduced-motion`)
 - Yazdırma desteği
+- **Form doldurarak yayın ekleme/silme** — GitHub Actions otomatik günceller
 
 ## Dosya Yapısı
 
 ```
 .
-├── index.html          # Sayfanın tüm içeriği (yayınlar, kitaplar, dersler...)
+├── index.html          # Sayfa iskeleti (yayınlar hariç diğer tüm bölümler)
+├── publications.json   # 126 yayın; site JS ile buradan render eder
 ├── css/style.css       # Tüm görsel stil
-├── js/main.js          # Dil, tema, arama, menü etkileşimleri + i18n sözlüğü
-└── assets/
-    ├── favicon.svg
-    └── photo.jpg       # Hero bölümündeki portre fotoğrafı
+├── js/main.js          # Dil, tema, arama + yayın render + i18n sözlüğü
+├── assets/
+│   ├── favicon.svg
+│   └── photo.jpg       # Hero bölümündeki portre fotoğrafı
+└── .github/
+    ├── ISSUE_TEMPLATE/
+    │   ├── new-publication.yml    # "Yeni Yayın Ekle" formu
+    │   └── delete-publication.yml # "Yayın Sil" formu
+    └── workflows/
+        ├── add-publication.yml    # Issue → JSON güncelle → commit
+        └── delete-publication.yml # Issue → JSON'dan sil → commit
 ```
 
-## İçerik Güncelleme
+---
 
-Her şey tek bir HTML dosyasında. İçeriği güncellemek için `index.html` açılır ve ilgili
-bölüm bulunur. Aşağıda en sık yapılacak güncellemeler örneklenmiştir.
+## İçerik Güncelleme (kod bilmeden)
 
-### 1) Yeni yayın eklemek
+**Hiçbir dosyayı elle değiştirmenize gerek yok.** Tüm güncellemeler GitHub Issues
+üzerindeki form aracılığıyla yapılır; site otomatik güncellenir.
 
-Yayınlar, "PUBLICATIONS" bölümünde yıllara göre `<details class="year">` blokları
-içinde listelenir. Bir yayını eklemek için, ait olduğu yılın bloğundaki `<ol class="pubs">`
-içine yeni bir `<li>` satırı eklenir.
+### Yeni yayın eklemek
 
-Biçim:
+1. Repo'nun GitHub sayfasında **Issues** sekmesi → **New issue**.
+2. Açılan seçeneklerden **"Yeni Yayin Ekle"** formunu seçin.
+3. Alanları doldurun:
+   - **Yıl** — örn. `2026` (zorunlu)
+   - **Başlık** — makale/kitap başlığı (zorunlu)
+   - **Yazarlar** — yardımcı yazardız ise `X and Y` yazın (opsiyonel; boş bırakınca tek yazar gösterilir)
+   - **Dergi / yayın bilgisi** — dergi, cilt, sayfa (opsiyonel)
+   - **DOI / Kaynak Bağlantısı** — yayının yanındaki dış link (opsiyonel)
+4. **Submit** → arka planda GitHub Action `publications.json`'a ekler, commit atar,
+   site ~1 dakika içinde güncellenir. Forma otomatik yanıt gelir, issue kapanır.
+5. Hatalı/eksik formda Action size issue altında neyi düzeltmeniz gerektiğini yazar.
 
-```html
-<li>Başlık (with Yazar). <em>Dergi, cilt(sayı), sayfalar.</em>
-  <a class="pub-src" href="DOI-VEYA-KAYNAK-LINKI" target="_blank" rel="noopener" title="Kaynak / DOI">↗</a>
-</li>
-```
+### Yayın silmek / düzeltmek
 
-Kurallar:
-- Yayın metni `<em>...</em>` arasına dergi/ciltbilgisi konur (gri italik görünür).
-- DOI/kaynak linki varsa `<a class="pub-src">` ile eklenir; yoksa `<a>` satırı hiç eklenmez.
-- Yeni yıl ekleniyorsa, mevcut bir `<details class="year">` bloğu kopyalanıp
-  `year__label` (yıl) ve `year__count` (o yılın yayın sayısı) güncellenir.
-  Yeni yılın açılır gelmesini istemiyorsanız `<details class="year">` (open olmadan),
-  açık gelmesini istiyorsanız `<details class="year" open>` yazın.
+1. **Issues** → **New issue** → **"Yayin Sil / Duzelt"** formu.
+2. Kaldırılacak yayının **tam başlığını** yazın (siteden kopyala-yapıştır en güvenli).
+3. **Submit** → Action, başlığa en yakın eşleşmeyi bulur, JSON'dan çıkarır, site güncellenir.
+4. Düzeltme için: önce silin, sonra doğru bilgilerle yeni "Ekle" formu gönderin.
 
-Önemli: Her yılın `<summary>` içindeki `<span class="year__count">` rakamı,
-o yılın `<li>` sayısıyla **birebir aynı** olmalı. Aksi halde arama/filtre sayacı hatalı görünür.
-Varsayılan açık yıl 2026'dır (`<details class="year" open>`).
+### Kitap, proje, ders ve iletişim güncellemesi
 
-### 2) Yayın sayacı ve "intro" metni
-
-Üstteki "126 journal articles..." metni ve stats bandındaki "126" rakamı elle yazılır.
-Yayın ekledikçe şurada iki yer güncellenmelidir:
-
-- `index.html` satır civarı 105: `<span class="stat__num">126</span>`
-- `index.html` satır civarı 183:
-  `<p class="section__intro" data-i18n="pubs.intro">126 journal articles...</p>`
-
-Çeviri metinleri de `js/main.js` içindeki `pubs.intro` anahtarında EN ve TR olarak tutulur;
-sayı orada da elle güncellenir.
-
-### 3) Kitap / proje / ders / iletişim güncelleme
-
-Her bölüm `index.html` içinde HTML yorumuyla işaretlenmiştir:
+Bu bölümler sık değişmediği için elle yapılır (`index.html` içinde ilgili blok).
+İlgili bölüm HTML yorumlarıyla işaretlidir:
 
 ```html
 <!-- ============ BOOKS ============ -->
 <!-- ============ PROJECTS ============ -->
-<!-- ============ PUBLICATIONS ============ -->
 <!-- ============ TEACHING ============ -->
 <!-- ============ CONTACT ============ -->
 ```
 
 Kitap = `<article class="card">`, ders = `<article class="teach">` içinde `<li>` olarak
-kopyala-yapıştır mantığıyla eklenir. Yalnızca metin ve `href` değiştirilir.
+kopyala-yapıştır eklenir; yalnızca metin ve `href` değiştirilir.
 
-### 4) Çevirileri (İngilizce/Türkçe) güncelleme
+> Not: Eğer kitap/proje/ders de sık güncellenecekse, yukarıdaki form mantığı
+> `books.json`, `teaching.json` gibi dosyalara da genişletilebilir. Şu an yayınlar
+> en sık güncellenen bölüm olduğu için oradadır.
 
-Sayfadaki görünen metinlerin çevirileri `js/main.js` içindeki `I18N` sözlüğünde
-`en:` ve `tr:` blokları halinde tutulur. Bir metni değiştirmek veya yeni bir
-çevirilebilir metin eklemek için:
+### Fotoğrafı değiştirme
 
-- HTML'de ilgili öğeye `data-i18n="anahtar"` eklenir,
-- `js/main.js` içinde her iki dilde (`en:` ve `tr:`) o `anahtar` tanımlanır.
+`assets/photo.jpg` dosyasını aynı isimle değiştirin. Önerilen: kareye yakın,
+~512×512 px ve üzeri.
 
-Örnek:
+---
 
-```html
-<h3 data-i18n="books.b6title">Yeni Kitap</h3>
-```
+## Yayına Alma
 
-```js
-// js/main.js içinde en: blok
-'books.b6title': 'New Book',
-// tr: blok
-'books.b6title': 'Yeni Kitap',
-```
+Site statiktir; herhangi bir statik hostta çalışır. GitHub Pages önerilir
+(ücretsiz). Kurulum adımları için `DOMAIN-KURULUM.md` dosyasına bakın.
 
-Yayın başlıkları (kendi içinde zaten çok dilli olduğu için) `data-i18n`'e bağlı değil;
-doğrudan HTML içine yazılır.
-
-### 5) Fotoğrafı değiştirme
-
-`assets/photo.jpg` dosyasını aynı isimle değiştirmek yeterlidir. Önerilen:
-kareye yakın, ~512×512 px ve üzeri. HTML'de `width="128" height="128"` gösterim
-boyutudur, dosya boyutu değildir.
-
-### 6) Alan adını (URL) değiştirme
+## Alan Adını (URL) Değiştirme
 
 Site başka bir alan adına taşınırsa, `index.html` `<head>` bölümündeki şu satırlar
 güncellenmelidir:
@@ -132,10 +112,24 @@ ve JSON-LD bloğunda:
 Bu üç yer dışında tüm yollar görecelidir (`assets/...`, `css/...`, `js/...`),
 yani kök alan adına taşınırken ek bir değişiklik gerektirmez.
 
-## Yayına Alma
+## Alternatif: JSON'u elle güncellemek
 
-Site statiktir; herhangi bir statik hostta çalışır. GitHub Pages önerilir
-(ücretsiz). Kurulum adımları için `DOMAIN-KURULUM.md` dosyasına bakın.
+Form yerine doğrudan `publications.json` düzenlenebilir (GitHub web editöründe veya
+yerelde). Her kayıt şu yapıda:
+
+```json
+{
+  "year": 2026,
+  "title": "Yayin Basligi",
+  "authors": "Yazar2 and Yazar3",
+  "venue": "Dergi, 60, 55-80.",
+  "doi": "https://doi.org/10.xxx/xxx"
+}
+```
+
+- `authors`, `venue`, `doi` değerleri yoksa `null` yazılır.
+- Yıllar büyükten küçüğe otomatik sıralanır; elden sıralama gerekmez.
+- Commit atılınca site otomatik güncellenir (GitHub Pages).
 
 ## Lisans
 

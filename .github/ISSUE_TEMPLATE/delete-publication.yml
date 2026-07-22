@@ -1,0 +1,20 @@
+name: "Yayin Sil / Duzelt"
+description: "Mevcut bir yayini listeden kaldirin (yeniden duzenlemek icin de kullanilabilir; once silip sonra yeniden ekleyin)."
+title: "Sil: <kisa baslik>"
+labels:
+  - "yayin-sil"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Kaldirilacak yayini tespit etmek icin tam basligini yazin.
+        Baslik duzgun yazilirsa arka plandaki islem otomatik bulur ve kaldirir.
+
+  - type: input
+    id: title
+    attributes:
+      label: "Kaldirilacak yayinin tam basligi"
+      description: "Site uzerindeki gorunen baslik; kopyala-yapistir onerilir (en iyi eslesme)."
+      placeholder: "Shadow Economies around the World: Evidence from Metropolitan Areas"
+    validations:
+      required: true

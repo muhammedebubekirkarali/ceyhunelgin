@@ -1,0 +1,141 @@
+name: Yayin Sil
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  delete:
+    if: contains(github.event.issue.labels.*.name, 'yayin-sil')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: Kaynak kodu cikar
+        uses: actions/checkout@v4
+
+      - name: Yayin sil (baslik eslesmesiyle)
+        id: del
+        shell: python
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          import json, os, re, sys
+          from pathlib import Path
+
+          body = os.environ["ISSUE_BODY"]
+
+          def field(label):
+              m = re.search(r"###\s+" + re.escape(label) + r"\s*\n+(.*)", body)
+              if not m:
+                  return ""
+              val = m.group(1).split("\n")[0].strip()
+              if val in ("", "_No response_"):
+                  return ""
+              return val
+
+          title = field("Kaldirilacak yayinin tam basligi").strip()
+          if not title:
+              Path(os.environ["GITHUB_ENV"]).write_text(
+                  "RESULT=error\nMESSAGE=Baslik bos.\n"
+              )
+              sys.exit(0)
+
+          pj = Path("publications.json")
+          data = json.loads(pj.read_text(encoding="utf-8"))
+
+          # once tam eslesme dene; yoksa case-insensitive + bosluk-normalize
+          target = title
+          match = None
+          for p in data:
+              if p["title"] == target:
+                  match = p
+                  break
+          if not match:
+              norm = lambda s: re.sub(r"\s+", " ", s).strip().lower()
+              nt = norm(target)
+              for p in data:
+                  if norm(p["title"]) == nt:
+                      match = p
+                      break
+              if not match:
+                  # iceren
+                  for p in data:
+                      if nt in norm(p["title"]) or norm(p["title"]) in nt:
+                          match = p
+                          break
+
+          if not match:
+              Path(os.environ["GITHUB_ENV"]).write_text(
+                  f"RESULT=nomatch\nTITLE={title}\n"
+              )
+              sys.exit(0)
+
+          data2 = [p for p in data if p is not match]
+          pj.write_text(
+              json.dumps(data2, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          Path(os.environ["GITHUB_ENV"]).write_text(
+              f"RESULT=ok\nTITLE={match['title']}\nYEAR={match.get('year','')}\nCOUNT={len(data2)}\n"
+          )
+          print("Silindi:", match["title"])
+
+      - name: Commit + push
+        if: env.RESULT == 'ok'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add publications.json
+          git commit -m "Yayin silindi (#${{ github.event.issue.number }}): ${{ env.TITLE }}"
+          git push
+
+      - name: Basari yorumu + kapat
+        if: env.RESULT == 'ok'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Yayin listeden kaldirildi.\n\n- Baslik: ${process.env.TITLE}\n- Kalan yayin: ${process.env.COUNT}\n\nSite bir dakika icinde guncellenir.`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: "closed"
+            });
+
+      - name: Eslesmedi yorumu + kapat
+        if: env.RESULT == 'nomatch'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Bu baslikla eslesen bir yayin bulunamadi:\n\n${process.env.TITLE}\n\nBasligin tam yazildigindan emin olun (site uzerinden kopyala-yapistir oe ras). Tekrar denerken yeni bir issue acin.`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: "closed",
+              labels: ["eslesmedi"]
+            });
+
+      - name: Hata yorumu + kapat
+        if: env.RESULT == 'error'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Form hatali:\n\n${process.env.MESSAGE}`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: "closed",
+              labels: ["hatali-form"]
+            });

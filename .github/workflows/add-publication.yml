@@ -1,0 +1,139 @@
+name: Yayin Ekle
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add:
+    if: contains(github.event.issue.labels.*.name, 'yeni-yayin')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: Kaynak kodu cikar
+        uses: actions/checkout@v4
+
+      - name: Yayin ekle (JSON guncelle)
+        id: add
+        shell: python
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          import json, os, re, sys
+          from pathlib import Path
+
+          body = os.environ["ISSUE_BODY"]
+
+          # Form cevaplarini ayikla: GitHub "### Label\n\nvalue\n" seklinde yazar
+          def field(label):
+              # '### <label>' satirindan sonraki ilk bos olmayan satir
+              m = re.search(r"###\s+" + re.escape(label) + r"\s*\n+(.*)", body)
+              if not m:
+                  return ""
+              # _No response_ veya bosmu kontrol
+              val = m.group(1).strip()
+              if val == "_No response_" or val == "":
+                  return ""
+              return val
+
+          year_s = field("Yil")
+          title = field("Baslik")
+          authors = field("Yazarlar \\(opsiyonel\\)")
+          venue = field("Dergi / yayin bilgisi \\(opsiyonel\\)")
+          doi = field("DOI / Kaynak Baglantisi \\(opsiyonel\\)")
+
+          # hatalari topla
+          errs = []
+          try:
+              year = int(year_s.strip())
+              if year < 1900 or year > 2100:
+                  errs.append(f"Yil cok buyuk: {year}")
+          except Exception:
+              errs.append("Yil sayi degil veya bos.")
+
+          title = title.strip()
+          if not title:
+              errs.append("Baslik bos.")
+
+          if errs:
+              print("VALIDATION_ERRORS")
+              print("\n".join(errs))
+              # hata bayragini dosyaya yaz ki sonraki step okusun
+              Path(os.environ["GITHUB_ENV"]).write_text(
+                  f"RESULT=error\nMESSAGE=" + "; ".join(errs) + "\n"
+              )
+              sys.exit(0)
+
+          # publication nesnesi
+          pub = {
+              "year": year,
+              "title": title,
+              "authors": authors.strip() or None,
+              "venue": venue.strip() or None,
+              "doi": doi.strip() or None,
+          }
+
+          pj = Path("publications.json")
+          data = json.loads(pj.read_text(encoding="utf-8"))
+          data.append(pub)
+          # yila gore buyukten kucuge; yil esitse en son eklenen en sona -> stable sort
+          data.sort(key=lambda p: p["year"], reverse=True)
+          pj.write_text(
+              json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          Path(os.environ["GITHUB_ENV"]).write_text(
+              f"RESULT=ok\nYEAR={year}\nTITLE={title}\nCOUNT={len(data)}\n"
+          )
+          print("OK added:", title)
+
+      - name: Commit + push
+        if: env.RESULT == 'ok'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add publications.json
+          git commit -m "Yayin eklendi (#${{ github.event.issue.number }}): ${{ env.TITLE }}"
+          git push
+
+      - name: Issue'ya basari yorumu + kapat
+        if: env.RESULT == 'ok'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Yayin siteniz eklendi.\n\n- Baslik: ${process.env.TITLE}\n- Toplam yayin: ${process.env.COUNT}\n\nBir dakika icinde GitHub Pages guncellenir.`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: "closed"
+            });
+
+      - name: Issue'ya hata yorumu + kapat
+        if: env.RESULT == 'error'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Yayin eklenemedi. Form eksik veya hatali:\n\n${process.env.MESSAGE}\n\nDuzeltip yeniden gonderin.`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: "closed",
+              labels: ["hatali-form"]
+            });

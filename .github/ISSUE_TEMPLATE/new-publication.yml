@@ -1,0 +1,57 @@
+name: "Yeni Yayin Ekle"
+description: "Yeni bir makale/kitap/kitap bolumu ekleyin. Gonderdiginizde site otomatik guncellenir."
+title: "Yayin: <kisa baslik>"
+labels:
+  - "yeni-yayin"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bu form dolduruldugunda siteye otomatik eklenir. Bos birakilan alanlar atlanir.
+        Yeni yil otomatik olusur; mevcut yila eklenecekse zaten var olan yili secin.
+
+  - type: input
+    id: year
+    attributes:
+      label: "Yil"
+      description: "Orn. 2026"
+      placeholder: "2026"
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: "Baslik"
+      description: "Makale/kitap basligi. Yazarlar ayri alanda."
+      placeholder: "Shadow Economies around the World"
+    validations:
+      required: true
+
+  - type: input
+    id: authors
+    attributes:
+      label: "Yazarlar (opsiyonel)"
+      description: "Yazardiz ise bos birakin. Birden fazla yazarda 'X and Y' seklinde yazin. Orijinal HTML'de '(with ...)' parantezi otomatik eklenir."
+      placeholder: "Adem Y. Elveren and Eric Budd"
+
+  - type: input
+    id: venue
+    attributes:
+      label: "Dergi / yayin bilgisi (opsiyonel)"
+      description: "Dergi adi, cilt(sayi), sayfa veya 'Forthcoming in ...' seklinde. Oldugu gibi yazilacak."
+      placeholder: "Journal of International Development, 60, 55-80."
+
+  - type: input
+    id: doi
+    attributes:
+      label: "DOI / Kaynak Baglantisi (opsiyonel)"
+      description: "Yayin yaninda cikacak dis-link ( ↗ ). Yoksa bos birakin."
+      placeholder: "https://doi.org/10.xxx/xxx"
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **Kullanim:** Formu gonderince bir issue acilir; arka planda otomatik
+        islem `publications.json`'a bu yayini ekler, siteyi gunceller ve issue'yu kapatir.

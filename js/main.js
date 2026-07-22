@@ -112,14 +112,77 @@ themeBtn.addEventListener('click', () =>
   setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark')
 );
 
-// ---------- Publications: filter + expand/collapse ----------
-const yearBlocks = [...document.querySelectorAll('#publications details.year')];
+// ---------- Publications: JSON veri + render + filter/expand ----------
+const pubsList = document.getElementById('pubsList');
 const searchInput = document.getElementById('pubSearch');
 const status = document.getElementById('pubStatus');
+let yearBlocks = [];   // renderPubs sonrasi dolar
+let allPubs = [];      // publications.json icerigi
 
-yearBlocks.forEach((d) => {
-  d.dataset.count = d.querySelector('.year__count').textContent;
-});
+// JSON'dan tek bir yayini HTML <li> stringine cevir (XSS'e karsi escape)
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function pubToLi(pub) {
+  let title = escapeHtml(pub.title);
+  if (pub.authors) title += ' (with ' + escapeHtml(pub.authors) + ')';
+  const venue = pub.venue ? ' <em>' + escapeHtml(pub.venue) + '</em>' : '';
+  const doi = pub.doi
+    ? ' <a class="pub-src" href="' + escapeHtml(pub.doi) + '" target="_blank" rel="noopener" title="' + t('pubsrc.source') + '">&#8599;</a>'
+    : '';
+  return '<li>' + title + '.' + venue + doi + '</li>';
+}
+
+// Yillara gore grupla ve #pubsList icine render et
+function renderPubs(pubs) {
+  allPubs = pubs;
+  // yil -> [pub] (buyukten kucuge)
+  const byYear = new Map();
+  pubs.forEach((p) => {
+    if (!byYear.has(p.year)) byYear.set(p.year, []);
+    byYear.get(p.year).push(p);
+  });
+  const years = [...byYear.keys()].sort((a, b) => b - a);
+
+  let html = '';
+  years.forEach((y, i) => {
+    const items = byYear.get(y);
+    html += '<details class="year"' + (i === 0 ? ' open' : '') + '>';
+    html += '<summary><span class="year__label">' + y + '</span>';
+    html += '<span class="year__count">' + items.length + '</span></summary>';
+    html += '<ol class="pubs">';
+    html += items.map(pubToLi).join('');
+    html += '</ol></details>';
+  });
+  pubsList.innerHTML = html;
+  pubsList.removeAttribute('aria-live');
+
+  yearBlocks = [...pubsList.querySelectorAll('details.year')];
+  yearBlocks.forEach((d) => {
+    d.dataset.count = d.querySelector('.year__count').textContent;
+  });
+
+  // pub-src data-kind baslik siniflandirmasi (mevcut ilklendirme mantigi)
+  pubsList.querySelectorAll('.pub-src').forEach((a) => {
+    a.title = t('pubsrc.source');
+  });
+
+  // toplam sayiyi intro/stat guncelle
+  updateCounts(pubs.length);
+  resetFilter();
+}
+
+function updateCounts(total) {
+  const introEl = document.querySelector('.section__intro[data-i18n="pubs.intro"]');
+  if (introEl) introEl.textContent = t('pubs.intro').replace('126', total);
+  const statNum = document.querySelector('.stat__num');
+  // ilk .stat numarasi = Publications stat; stat__num'larin ilki
+  const statNums = document.querySelectorAll('.stat__num');
+  if (statNums[0]) statNums[0].textContent = total;
+}
 
 function resetFilter() {
   yearBlocks.forEach((d, i) => {
@@ -166,6 +229,17 @@ document.getElementById('collapseAll').addEventListener('click', () => {
   yearBlocks.forEach((d) => (d.open = false));
 });
 
+// publications.json'u yukle ve render et
+fetch('publications.json')
+  .then((r) => {
+    if (!r.ok) throw new Error('publications.json yuklenemedi: ' + r.status);
+    return r.json();
+  })
+  .then(renderPubs)
+  .catch((err) => {
+    pubsList.innerHTML = '<p style="color:var(--muted)">' + escapeHtml(err.message) + '</p>';
+  });
+
 // ---------- Language ----------
 function applyLang(lang) {
   LANG = I18N[lang] ? lang : 'en';
@@ -182,10 +256,13 @@ function applyLang(lang) {
     });
   });
 
-  // pub-src link başlıkları
+  // pub-src link başlıkları (render edilmis pub-src'ler dahil)
   document.querySelectorAll('.pub-src').forEach((a) => {
-    a.title = t('pubsrc.' + (a.dataset.kind || 'source'));
+    a.title = t('pubsrc.source');
   });
+
+  // dil degisince intro/stat sayisini guncellenmis metne gore tazele
+  if (allPubs.length) updateCounts(allPubs.length);
 
   // tema butonu etiketini güncel dile göre tazele
   setTheme(root.dataset.theme || 'light', true);
@@ -261,8 +338,10 @@ window.addEventListener(
 toTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
 // ---------- Scroll reveal ----------
+// Not: .year'ler publications.json'dan async render edildiginden reveal'a
+// dahil edilmez; renderPubs icinde gerekirse visible baslangic yapilir.
 const revealEls = document.querySelectorAll(
-  '.section__title, .section__intro, .card, .teach, .contact__item, .year, .stat, .pub-toolbar'
+  '.section__title, .section__intro, .card, .teach, .contact__item, .stat, .pub-toolbar'
 );
 revealEls.forEach((el) => el.classList.add('reveal'));
 const revealObs = new IntersectionObserver(
@@ -279,12 +358,6 @@ const revealObs = new IntersectionObserver(
 revealEls.forEach((el) => revealObs.observe(el));
 
 // ---------- Init ----------
-// pub-src başlık türlerini ilk yüklemede sınıflandır
-document.querySelectorAll('.pub-src').forEach((a) => {
-  const s = a.title.toLowerCase();
-  a.dataset.kind = s.includes('repec') ? 'repec' : s.includes('kitap') ? 'book' : 'source';
-});
-
 const urlParams = new URLSearchParams(location.search);
 const stored = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 
