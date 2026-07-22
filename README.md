@@ -1,8 +1,9 @@
 # Ceyhun Elgin — Akademik Kişisel Web Sitesi
 
 Tek sayfalık, dış bağımlılığı olmayan (framework kullanmayan) statik web sitesi.
-Yayınlar `publications.json` dosyasından otomatik yüklenir; site GitHub Pages'de
-ücretsiz yayında kalır. Kod bilmeden, **form doldurarak** içerik güncellenebilir.
+Tüm içerik (yayınlar, kitaplar, dersler, projeler, iletişim) JSON dosyalarından
+otomatik yüklenir. GitHub Pages'de ücretsiz yayında kalır. **Kod bilmeden,
+GitHub Issues formu doldurarak** tüm bölümler güncellenebilir.
 
 ## Özellikler
 
@@ -12,26 +13,33 @@ Yayınlar `publications.json` dosyasından otomatik yüklenir; site GitHub Pages
 - Yayınlar arasında canlı arama / filtreleme
 - Erişilebilir (skip-link, ARIA etiketleri, `prefers-reduced-motion`)
 - Yazdırma desteği
-- **Form doldurarak yayın ekleme/silme** — GitHub Actions otomatik günceller
+- **Form doldurarak tüm içerik güncelleme** — GitHub Actions otomatik işler
 
 ## Dosya Yapısı
 
 ```
 .
-├── index.html          # Sayfa iskeleti (yayınlar hariç diğer tüm bölümler)
-├── publications.json   # 126 yayın; site JS ile buradan render eder
+├── index.html          # Sayfa iskeleti (içerikler boş konteyner olarak durur)
+├── publications.json   # 126 yayın
+├── books.json          # 5 kitap
+├── projects.json       # 3 proje / medya
+├── teaching.json       # 4 üniversitede verilen dersler
+├── contact.json        # İletişim bilgileri (mail, telefon, linkler)
 ├── css/style.css       # Tüm görsel stil
-├── js/main.js          # Dil, tema, arama + yayın render + i18n sözlüğü
+├── js/main.js          # Dil, tema, arama + tüm bölümleri render + i18n sözlüğü
 ├── assets/
 │   ├── favicon.svg
 │   └── photo.jpg       # Hero bölümündeki portre fotoğrafı
 └── .github/
     ├── ISSUE_TEMPLATE/
-    │   ├── new-publication.yml    # "Yeni Yayın Ekle" formu
-    │   └── delete-publication.yml # "Yayın Sil" formu
+    │   ├── new-publication.yml    # "Yeni Yayın Ekle"
+    │   ├── icerik-ekle.yml         # "İçerik Ekle" (kitap/proje/ders/iletişim)
+    │   └── icerik-sil.yml          # "İçerik Sil" (kitap/proje/ders)
     └── workflows/
-        ├── add-publication.yml    # Issue → JSON güncelle → commit
-        └── delete-publication.yml # Issue → JSON'dan sil → commit
+        ├── add-publication.yml     # Issue → publications.json
+        ├── delete-publication.yml  # Issue → publications.json sil
+        ├── icerik-ekle.yml         # Issue → ilgili JSON (kitap/proje/ders/iletişim)
+        └── icerik-sil.yml          # Issue → ilgili JSON silme
 ```
 
 ---
@@ -41,50 +49,37 @@ Yayınlar `publications.json` dosyasından otomatik yüklenir; site GitHub Pages
 **Hiçbir dosyayı elle değiştirmenize gerek yok.** Tüm güncellemeler GitHub Issues
 üzerindeki form aracılığıyla yapılır; site otomatik güncellenir.
 
-### Yeni yayın eklemek
+### Yayın eklemek (en sık)
 
-1. Repo'nun GitHub sayfasında **Issues** sekmesi → **New issue**.
-2. Açılan seçeneklerden **"Yeni Yayin Ekle"** formunu seçin.
-3. Alanları doldurun:
-   - **Yıl** — örn. `2026` (zorunlu)
-   - **Başlık** — makale/kitap başlığı (zorunlu)
-   - **Yazarlar** — yardımcı yazardız ise `X and Y` yazın (opsiyonel; boş bırakınca tek yazar gösterilir)
-   - **Dergi / yayın bilgisi** — dergi, cilt, sayfa (opsiyonel)
-   - **DOI / Kaynak Bağlantısı** — yayının yanındaki dış link (opsiyonel)
-4. **Submit** → arka planda GitHub Action `publications.json`'a ekler, commit atar,
-   site ~1 dakika içinde güncellenir. Forma otomatik yanıt gelir, issue kapanır.
-5. Hatalı/eksik formda Action size issue altında neyi düzeltmeniz gerektiğini yazar.
+1. Repo'nun GitHub sayfasında **Issues** → **New issue**.
+2. **"Yeni Yayin Ekle"** formunu seçin.
+3. Alanları doldurun: Yıl (zorunlu), Başlık (zorunlu), Yazarlar, Dergi/yayın bilgisi, DOI.
+4. **Submit** → Action `publications.json`'a ekler, siteyi günceller, issue'ya yanıt bırakır ve kapatır.
+5. Hatalı formda Action hatayı yorum olarak yazar.
 
-### Yayın silmek / düzeltmek
+### Yayın silmek
 
-1. **Issues** → **New issue** → **"Yayin Sil / Duzelt"** formu.
-2. Kaldırılacak yayının **tam başlığını** yazın (siteden kopyala-yapıştır en güvenli).
-3. **Submit** → Action, başlığa en yakın eşleşmeyi bulur, JSON'dan çıkarır, site güncellenir.
-4. Düzeltme için: önce silin, sonra doğru bilgilerle yeni "Ekle" formu gönderin.
+1. **"Yayin Sil / Duzelt"** formu → yayının **tam başlığını** yazın.
+2. Action başlığa göre bulup JSON'dan çıkarır. Çok esnek (büyük/küçük harf, baş/son boşluk duyarsız).
 
-### Kitap, proje, ders ve iletişim güncellemesi
+### Kitap / Proje / Ders eklemek
 
-Bu bölümler sık değişmediği için elle yapılır (`index.html` içinde ilgili blok).
-İlgili bölüm HTML yorumlarıyla işaretlidir:
+1. **"Icerik Ekle"** formu → "İçerik türü" açılır menüsünden `kitap`, `proje`, `ders` veya `iletisim` seçin.
+2. Sadece seçtiğiniz türle ilgili alanları doldurun (diğerleri boş kalabilir).
+   - **Kitap/Proje**: Başlık, Etiket, Not, Bağlantı, Bağlantı metni.
+   - **Ders**: Üniversite, Ders adı, Düzey (B.A./M.A./Ph.D.). Üniversite yeni ise yeni kart oluşturur; varsa o üniversiteye ekler.
+   - **İletişim**: Tüm iletişim bölümünü girdiklerinizle **değiştirir** (ek değil). Mail'leri `|` ile ayırın; dış linkleri her satıra bir tane `URL|Etiket` biçiminde yazın.
+3. **Submit** → ilgili JSON güncellenir, site yenilenir.
 
-```html
-<!-- ============ BOOKS ============ -->
-<!-- ============ PROJECTS ============ -->
-<!-- ============ TEACHING ============ -->
-<!-- ============ CONTACT ============ -->
-```
+### Kitap / Proje / Ders silmek
 
-Kitap = `<article class="card">`, ders = `<article class="teach">` içinde `<li>` olarak
-kopyala-yapıştır eklenir; yalnızca metin ve `href` değiştirilir.
-
-> Not: Eğer kitap/proje/ders de sık güncellenecekse, yukarıdaki form mantığı
-> `books.json`, `teaching.json` gibi dosyalara da genişletilebilir. Şu an yayınlar
-> en sık güncellenen bölüm olduğu için oradadır.
+1. **"Icerik Sil / Duzelt"** formu → tür seçin → kaldırılacak öğenin tam adını yazın.
+   - Ders silerken üniversite adını da yazın (hangi üniversiteden silineceğini belirler).
+2. Action eşleşen öğeyi bulup JSON'dan çıkarır. Bir üniversitenin son dersi silinirse üniversite kartı da otomatik kalkar.
 
 ### Fotoğrafı değiştirme
 
-`assets/photo.jpg` dosyasını aynı isimle değiştirin. Önerilen: kareye yakın,
-~512×512 px ve üzeri.
+`assets/photo.jpg` dosyasını aynı isimle değiştirin (GitHub web arayüzünden veya push ile). Önerilen: kareye yakın, ~512×512 px ve üzeri.
 
 ---
 
@@ -114,22 +109,32 @@ yani kök alan adına taşınırken ek bir değişiklik gerektirmez.
 
 ## Alternatif: JSON'u elle güncellemek
 
-Form yerine doğrudan `publications.json` düzenlenebilir (GitHub web editöründe veya
-yerelde). Her kayıt şu yapıda:
+Form yerine doğrudan JSON dosyaları GitHub web editöründe düzenlenebilir.
+Her dosyanın yapısı:
 
+**publications.json**
 ```json
-{
-  "year": 2026,
-  "title": "Yayin Basligi",
-  "authors": "Yazar2 and Yazar3",
-  "venue": "Dergi, 60, 55-80.",
-  "doi": "https://doi.org/10.xxx/xxx"
-}
+{ "year": 2026, "title": "...", "authors": "Y2 and Y3", "venue": "Dergi, 60, 55-80.", "doi": "https://..." }
+```
+- `authors`, `venue`, `doi` yoksa `null`.
+- Yıllar büyükten küçüğe otomatik sıralanır.
+
+**books.json / projects.json**
+```json
+{ "label": "English · Amazon", "title": "...", "note": "...", "link": "https://...", "link_label": "View on Amazon →" }
 ```
 
-- `authors`, `venue`, `doi` değerleri yoksa `null` yazılır.
-- Yıllar büyükten küçüğe otomatik sıralanır; elden sıralama gerekmez.
-- Commit atılınca site otomatik güncellenir (GitHub Pages).
+**teaching.json**
+```json
+{ "university": "Boğaziçi University", "courses": [ { "name": "...", "level": "B.A." } ] }
+```
+
+**contact.json**
+```json
+{ "mails": ["a@b.com"], "phone": "+90...", "phone_display": "+90 ...", "links": [ {"url":"https://...","label":"..."} ] }
+```
+
+Commit atılır atılmaz site otomatik güncellenir (GitHub Pages).
 
 ## Lisans
 

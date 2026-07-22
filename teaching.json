@@ -1,0 +1,122 @@
+[
+  {
+    "university": "Boğaziçi University",
+    "courses": [
+      {
+        "name": "Special Topics in Applied Economics",
+        "level": "B.A."
+      },
+      {
+        "name": "Special Topics in Research Methodology of Economics",
+        "level": "B.A."
+      },
+      {
+        "name": "Growth and Development",
+        "level": "B.A."
+      },
+      {
+        "name": "Economic Policy",
+        "level": "B.A."
+      },
+      {
+        "name": "Intermediate Macroeconomics",
+        "level": "B.A."
+      },
+      {
+        "name": "Principles of Microeconomics",
+        "level": "B.A."
+      },
+      {
+        "name": "Principles of Macroeconomics",
+        "level": "B.A."
+      },
+      {
+        "name": "Economics of European Integration",
+        "level": "M.A."
+      },
+      {
+        "name": "International Macroeconomics",
+        "level": "M.A."
+      },
+      {
+        "name": "Graduate Macroeconomics 1 and 2",
+        "level": "M.A."
+      },
+      {
+        "name": "Advanced Macroeconomics 1 and 2",
+        "level": "Ph.D."
+      }
+    ]
+  },
+  {
+    "university": "Boston University",
+    "courses": [
+      {
+        "name": "International Economics",
+        "level": "B.A."
+      },
+      {
+        "name": "Economics of Poverty and Discrimination",
+        "level": "B.A."
+      },
+      {
+        "name": "Empirical Economics",
+        "level": "B.A."
+      },
+      {
+        "name": "Intermediate Microeconomics",
+        "level": "B.A."
+      },
+      {
+        "name": "Intermediate Macroeconomics",
+        "level": "B.A."
+      },
+      {
+        "name": "Principles of Macroeconomics",
+        "level": "B.A."
+      }
+    ]
+  },
+  {
+    "university": "University of Minnesota",
+    "courses": [
+      {
+        "name": "Introduction to Macroeconomics",
+        "level": "B.A."
+      },
+      {
+        "name": "Introduction to Microeconomics",
+        "level": "B.A."
+      },
+      {
+        "name": "Labor Economics",
+        "level": "B.A."
+      },
+      {
+        "name": "Intermediate Microeconomics",
+        "level": "B.A."
+      },
+      {
+        "name": "Intermediate Macroeconomics",
+        "level": "B.A."
+      },
+      {
+        "name": "Quantitative Analysis of the Macroeconomy",
+        "level": "B.A."
+      }
+    ]
+  },
+  {
+    "university": "Columbia University",
+    "courses": [
+      {
+        "name": "Public Economics",
+        "level": "B.A."
+      },
+      {
+        "name": "International Economics",
+        "level": "M.A."
+      }
+    ]
+  }
+]

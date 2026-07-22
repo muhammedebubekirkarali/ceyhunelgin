@@ -31,20 +31,35 @@ jobs:
           # Form cevaplarini ayikla: GitHub "### Label\n\nvalue\n" seklinde yazar
           def field(label):
               # '### <label>' satirindan sonraki ilk bos olmayan satir
-              m = re.search(r"###\s+" + re.escape(label) + r"\s*\n+(.*)", body)
-              if not m:
+              marker = "### " + label
+              i = body.find(marker)
+              if i < 0:
                   return ""
-              # _No response_ veya bosmu kontrol
-              val = m.group(1).strip()
-              if val == "_No response_" or val == "":
+              rest = body[i + len(marker):]
+              started = False
+              val_lines = []
+              for ln in rest.split("\n")[1:]:
+                  if ln.startswith("### "):
+                      break
+                  if not started:
+                      if ln.strip() == "":
+                          continue
+                      started = True
+                      val_lines.append(ln)
+                  else:
+                      val_lines.append(ln)
+              while val_lines and val_lines[-1].strip() == "":
+                  val_lines.pop()
+              val = "\n".join(val_lines).strip()
+              if val in ("", "_No response_"):
                   return ""
               return val
 
           year_s = field("Yil")
           title = field("Baslik")
-          authors = field("Yazarlar \\(opsiyonel\\)")
-          venue = field("Dergi / yayin bilgisi \\(opsiyonel\\)")
-          doi = field("DOI / Kaynak Baglantisi \\(opsiyonel\\)")
+          authors = field("Yazarlar (opsiyonel)")
+          venue = field("Dergi / yayin bilgisi (opsiyonel)")
+          doi = field("DOI / Kaynak Baglantisi (opsiyonel)")
 
           # hatalari topla
           errs = []

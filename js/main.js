@@ -240,6 +240,113 @@ fetch('publications.json')
     pubsList.innerHTML = '<p style="color:var(--muted)">' + escapeHtml(err.message) + '</p>';
   });
 
+// ---------- Books / Projects / Teaching / Contact ----------
+const BOOK_ICON = '<span class="card__icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M4 19a2 2 0 012-2h13"/></svg></span>';
+const YT_ICON = '<span class="card__icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="M10 9.5l5 2.5-5 2.5z"/></svg></span>';
+const INDEX_ICON = '<span class="card__icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M6 16v-5m6 5V8m6 8v-9"/></svg></span>';
+const AWARD_ICON = '<span class="card__icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5L7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>';
+
+function cardIcon(label) {
+  if (!label) return BOOK_ICON;
+  const l = label.toLowerCase();
+  if (l.includes('youtube')) return YT_ICON;
+  if (l.includes('dataset') || l.includes('index') || l.includes('endeks') || l.includes('veri')) return INDEX_ICON;
+  if (l.includes('eu') || l.includes('ab') || l.includes('funded') || l.includes('destek')) return AWARD_ICON;
+  return BOOK_ICON;
+}
+
+let booksData = [], projectsData = [], teachingData = [], contactData = null;
+
+function renderCard(item, container) {
+  let html = '<article class="card">';
+  html += cardIcon(item.label);
+  if (item.label) html += '<p class="card__label">' + escapeHtml(item.label) + '</p>';
+  if (item.title) html += '<h3 class="card__title">' + escapeHtml(item.title) + '</h3>';
+  if (item.note) html += '<p class="card__note">' + escapeHtml(item.note) + '</p>';
+  if (item.link) html += '<a class="card__link" href="' + escapeHtml(item.link) + '" target="_blank" rel="noopener">' + escapeHtml(item.link_label || item.link) + '</a>';
+  html += '</article>';
+  return html;
+}
+
+function renderBooks(items) {
+  booksData = items;
+  const c = document.getElementById('booksList');
+  if (!c) return;
+  c.innerHTML = '<div class="cards">' + items.map((it) => renderCard(it, c)).join('') + '</div>';
+}
+
+function renderProjects(items) {
+  projectsData = items;
+  const c = document.getElementById('projectsList');
+  if (!c) return;
+  c.innerHTML = '<div class="cards">' + items.map((it) => renderCard(it, c)).join('') + '</div>';
+}
+
+function renderTeaching(items) {
+  teachingData = items;
+  const c = document.getElementById('teachingList');
+  if (!c) return;
+  let html = '<div class="teach-grid">';
+  items.forEach((u) => {
+    html += '<article class="teach">';
+    html += '<h3>' + escapeHtml(u.university) + '</h3>';
+    html += '<ul>';
+    (u.courses || []).forEach((co) => {
+      html += '<li>' + escapeHtml(co.name) + ' <span class="teach__level">' + escapeHtml(co.level) + '</span></li>';
+    });
+    html += '</ul></article>';
+  });
+  html += '</div>';
+  c.innerHTML = html;
+}
+
+function renderContact(data) {
+  contactData = data;
+  const c = document.getElementById('contactList');
+  if (!c) return;
+  const mailIcon = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
+  const phoneIcon = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/></svg>';
+  const addrIcon = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.1 7-11a7 7 0 10-14 0c0 4.9 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+  const linkIcon = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a5 5 0 007.1 0l2-2a5 5 0 00-7.1-7.1l-1.2 1.2M14 10a5 5 0 00-7.1 0l-2 2a5 5 0 007.1 7.1l1.2-1.2"/></svg>';
+
+  let html = '<div class="contact">';
+  // mail
+  html += '<div class="contact__item"><h3>' + mailIcon + '<span data-i18n="contact.mail">E-mail</span></h3><p>';
+  html += (data.mails || []).map((m) => '<a href="mailto:' + escapeHtml(m) + '">' + escapeHtml(m) + '</a>').join('<br>\n');
+  html += '</p></div>';
+  // phone
+  if (data.phone) {
+    html += '<div class="contact__item"><h3>' + phoneIcon + '<span data-i18n="contact.phone">Phone</span></h3><p>'
+      + '<a href="tel:' + escapeHtml(data.phone) + '">' + escapeHtml(data.phone_display || data.phone) + '</a></p></div>';
+  }
+  // address (i18n contact.addr.v)
+  const addr = (LANG === 'tr') ? t('contact.addr.v') : t('contact.addr.v');
+  html += '<div class="contact__item"><h3>' + addrIcon + '<span data-i18n="contact.addr">Address</span></h3><p data-i18n="contact.addr.v">'
+    + escapeHtml(addr) + '</p></div>';
+  // links
+  html += '<div class="contact__item"><h3>' + linkIcon + '<span data-i18n="contact.links">Links</span></h3><p>';
+  const linksHtml = (data.links || []).map((l) => '<a href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">' + escapeHtml(l.label) + '</a>').join('<br>\n');
+  html += linksHtml + '</p></div>';
+  html += '</div>';
+  c.innerHTML = html;
+  // address update'indedil degisince guncellenecek
+}
+
+// 4 dosyayi fetch ile yukle
+function fetchJson(name) {
+  return fetch(name + '.json').then((r) => {
+    if (!r.ok) throw new Error(name + '.json: ' + r.status);
+    return r.json();
+  });
+}
+
+Promise.all([
+  fetchJson('books').then(renderBooks).catch((e) => { document.getElementById('booksList').innerHTML = '<p style="color:var(--muted)">' + escapeHtml(e.message) + '</p>'; }),
+  fetchJson('projects').then(renderProjects).catch((e) => { document.getElementById('projectsList').innerHTML = '<p style="color:var(--muted)">' + escapeHtml(e.message) + '</p>'; }),
+  fetchJson('teaching').then(renderTeaching).catch((e) => { document.getElementById('teachingList').innerHTML = '<p style="color:var(--muted)">' + escapeHtml(e.message) + '</p>'; }),
+  fetchJson('contact').then(renderContact).catch((e) => { document.getElementById('contactList').innerHTML = '<p style="color:var(--muted)">' + escapeHtml(e.message) + '</p>'; }),
+]);
+
 // ---------- Language ----------
 function applyLang(lang) {
   LANG = I18N[lang] ? lang : 'en';

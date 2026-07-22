@@ -28,10 +28,26 @@ jobs:
           body = os.environ["ISSUE_BODY"]
 
           def field(label):
-              m = re.search(r"###\s+" + re.escape(label) + r"\s*\n+(.*)", body)
-              if not m:
+              marker = "### " + label
+              i = body.find(marker)
+              if i < 0:
                   return ""
-              val = m.group(1).split("\n")[0].strip()
+              rest = body[i + len(marker):]
+              started = False
+              val_lines = []
+              for ln in rest.split("\n")[1:]:
+                  if ln.startswith("### "):
+                      break
+                  if not started:
+                      if ln.strip() == "":
+                          continue
+                      started = True
+                      val_lines.append(ln)
+                  else:
+                      val_lines.append(ln)
+              while val_lines and val_lines[-1].strip() == "":
+                  val_lines.pop()
+              val = "\n".join(val_lines).strip()
               if val in ("", "_No response_"):
                   return ""
               return val

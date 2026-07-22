@@ -1,0 +1,23 @@
+[
+  {
+    "label": "YouTube · Türkçe",
+    "title": "Informal Economics",
+    "note": "YouTube channel on economics, in Turkish.",
+    "link": "https://www.youtube.com/@kayitdisi/",
+    "link_label": "Watch on YouTube →"
+  },
+  {
+    "label": "Dataset / Index",
+    "title": "COVID-19 Economic Stimulus Index",
+    "note": null,
+    "link": "http://web.boun.edu.tr/elgin/COVID.htm",
+    "link_label": "Explore the index →"
+  },
+  {
+    "label": "EU Funded",
+    "title": "Jean Monnet Project",
+    "note": null,
+    "link": "https://web.bogazici.edu.tr/elgin/JeanMonnet.htm",
+    "link_label": "Project page →"
+  }
+]

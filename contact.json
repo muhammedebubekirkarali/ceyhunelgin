@@ -1,0 +1,22 @@
+{
+  "mails": [
+    "ceyhunelgin@gmail.com",
+    "ceyhun.elgin@boun.edu.tr"
+  ],
+  "phone": "+902123597653",
+  "phone_display": "+90 212 359 76 53",
+  "links": [
+    {
+      "url": "https://orcid.org/0000-0001-8796-2429",
+      "label": "ORCID: 0000-0001-8796-2429"
+    },
+    {
+      "url": "https://econ.boun.edu.tr/tr/ceyhun-elgin",
+      "label": "Boğaziçi faculty page"
+    },
+    {
+      "url": "https://www.youtube.com/@kayitdisi/",
+      "label": "YouTube: Informal Economics"
+    }
+  ]
+}
