@@ -1,12 +1,12 @@
-name: Yayin Sil
+name: Yayin Duzelt
 
 on:
   issues:
     types: [opened]
 
 jobs:
-  delete:
-    if: contains(github.event.issue.labels.*.name, 'yayin-sil')
+  edit:
+    if: contains(github.event.issue.labels.*.name, 'yayin-duzelt')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -15,8 +15,8 @@ jobs:
       - name: Kaynak kodu cikar
         uses: actions/checkout@v4
 
-      - name: Yayin sil (baslik eslesmesiyle)
-        id: del
+      - name: Yayin duzelt
+        id: edit
         shell: python
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
@@ -26,8 +26,6 @@ jobs:
           from pathlib import Path
 
           body = os.environ["ISSUE_BODY"]
-          # GitHub Issue Forms parantezli label'lari '\(' '\)' olarak escape eder;
-          # normalize ederek arama yapariz.
           body = body.replace("\\(", "(").replace("\\)", ")")
 
           def field(label):
@@ -35,10 +33,9 @@ jobs:
               i = body.find(marker)
               if i < 0:
                   return ""
-              rest = body[i + len(marker):]
               started = False
               val_lines = []
-              for ln in rest.split("\n")[1:]:
+              for ln in body[i + len(marker):].split("\n")[1:]:
                   if ln.startswith("### "):
                       break
                   if not started:
@@ -55,57 +52,96 @@ jobs:
                   return ""
               return val
 
-          title = field("Kaldirilacak yayinin tam basligi").strip()
-          if not title:
-              with open(os.environ["GITHUB_ENV"], "a") as _e:
-                  _e.write("RESULT=error\nMESSAGE=Baslik bos.\n")
-              sys.exit(0)
+          def env(key, val):
+              val = str(val).replace("\n", " ")
+              with open(os.environ["GITHUB_ENV"], "a") as f:
+                  f.write(f"{key}={val}\n")
+
+          def maybe(s):
+              return s.strip() or None
+
+          old_title = field("Degisecek yayinin tam basligi (simdiki)").strip()
+          if not old_title:
+              env("RESULT", "error"); env("MESSAGE", "Degisecek baslik bos."); sys.exit(0)
+
+          new_year_s = field("Yeni Yil (opsiyonel)").strip()
+          new_title = field("Yeni Baslik (opsiyonel)").strip()
+          new_authors = field("Yeni Yazarlar (opsiyonel)").strip()
+          new_venue = field("Yeni Dergi / yayin bilgisi (opsiyonel)").strip()
+          new_doi = field("Yeni DOI / Kaynak Baglantisi (opsiyonel)").strip()
+
+          if not any([new_year_s, new_title, new_authors, new_venue, new_doi]):
+              env("RESULT", "error"); env("MESSAGE", "Hicbir yeni deger verilmedi; en az bir alan doldurun."); sys.exit(0)
+
+          new_year = None
+          if new_year_s:
+              try:
+                  new_year = int(new_year_s)
+                  if new_year < 1900 or new_year > 2100:
+                      env("RESULT", "error"); env("MESSAGE", f"Yil cok buyuk: {new_year}"); sys.exit(0)
+              except Exception:
+                  env("RESULT", "error"); env("MESSAGE", "Yil sayi degil."); sys.exit(0)
 
           pj = Path("publications.json")
           data = json.loads(pj.read_text(encoding="utf-8"))
 
-          # 1) birebir normalize eslesme (case + bosluk + Turkce karakter duyarsiz)
           _cevir = str.maketrans({
               "ğ":"g","Ğ":"g","ı":"i","İ":"i","ö":"o","Ö":"o","ü":"u","Ü":"u",
               "ş":"s","Ş":"s","ç":"c","Ç":"c","â":"a","î":"i","û":"u"
           })
           def norm(s):
               return re.sub(r"\s+", " ", s.strip().translate(_cevir)).lower()
-          nt = norm(title)
+
+          # 1) birebir normalize eslesme
+          nt = norm(old_title)
           matches = [p for p in data if norm(p["title"]) == nt]
           if not matches:
-              # 2) tek eslesme iceren (cok eslesirse guvenlik icin nomatch)
+              # 2) tek iceren (cok eslesirse nomatch)
               matches = [p for p in data if nt in norm(p["title"]) or norm(p["title"]) in nt]
               if len(matches) > 1:
-                  with open(os.environ["GITHUB_ENV"], "a") as _e:
-                      _e.write("RESULT=nomatch\n")
-                      _e.write("TITLE=" + title.replace("\n", " ") + "\n")
-                      _e.write("MESSAGE=" + str(len(matches)) + " aday baslik bulundu; tam baslik yazin.\n")
+                  env("RESULT", "nomatch")
+                  env("DESC", old_title)
+                  env("MESSAGE", "COK:" + str(len(matches)))
                   sys.exit(0)
 
           if not matches:
-              with open(os.environ["GITHUB_ENV"], "a") as _e:
-                  _e.write("RESULT=nomatch\n")
-                  _e.write("TITLE=" + title.replace("\n", " ") + "\n")
-              sys.exit(0)
+              env("RESULT", "nomatch"); env("DESC", old_title); sys.exit(0)
 
-          match = matches[0]
-          data2 = [p for p in data if p is not match]
-          pj.write_text(
-              json.dumps(data2, ensure_ascii=False, indent=2) + "\n",
-              encoding="utf-8",
-          )
-          title_clean = match["title"].replace("\n", " ")
+          old = matches[0]
+          # yeni degerleri sadece verilenler uygula; bos -> mevcut korunur
+          updated = dict(old)
+          if new_year is not None:
+              updated["year"] = new_year
+          if new_title:
+              updated["title"] = new_title
+          if new_authors:
+              updated["authors"] = new_authors or None
+          elif new_authors == "" and "authors" in old:
+              pass  # bos -> mevcut korunur (formda '_No response_' zaten bos)
+          if new_venue:
+              updated["venue"] = new_venue or None
+          if new_doi or new_doi == "":
+              # doi '""' verildiyse (kullanici bilerek bos birakmis -> None)
+              updated["doi"] = new_doi or None
+
+          # eskiyi yeni ile degistir (ayni pozisyonda)
+          idx = data.index(old)
+          data[idx] = updated
+          # yila gore buyukten kucuge
+          data.sort(key=lambda p: p["year"], reverse=True)
+          pj.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          old_title_clean = old["title"].replace("\n", " ")
+          new_title_clean = updated["title"].replace("\n", " ")
           Path("commit_msg.txt").write_text(
-              f"Yayin silindi (#{os.environ['ISSUE_NUMBER']}): {title_clean}\n",
+              f"Yayin duzeltildi (#{os.environ['ISSUE_NUMBER']}): {old_title_clean} -> {new_title_clean}\n",
               encoding="utf-8",
           )
-          with open(os.environ["GITHUB_ENV"], "a") as _e:
-              _e.write("RESULT=ok\n")
-              _e.write("TITLE=" + title_clean + "\n")
-              _e.write(f"YEAR={match.get('year','')}\n")
-              _e.write(f"COUNT={len(data2)}\n")
-          print("Silindi:", match["title"])
+          env("RESULT", "ok")
+          env("OLD", old_title_clean)
+          env("NEW", new_title_clean)
+          env("COUNT", str(len(data)))
+          print("Duzeltildi:", old["title"], "->", updated["title"])
 
       - name: Commit + push
         if: env.RESULT == 'ok'
@@ -125,7 +161,7 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `Yayin listeden kaldirildi.\n\n- Baslik: ${process.env.TITLE}\n- Kalan yayin: ${process.env.COUNT}\n\nSite bir dakika icinde guncellenir.`
+              body: `Yayin guncellendi.\n\n- Eski: ${process.env.OLD}\n- Yeni: ${process.env.NEW}\n- Toplam: ${process.env.COUNT}\n\nBir dakika icinde site guncellenir.`
             });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,
@@ -137,10 +173,16 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const m = process.env.MESSAGE || "";
+            let body = `Degisecek yayin bulunamadi:\n\n${process.env.DESC}\n\nTam basligi yazin (siteden kopyala-yapistir).`;
+            if (m.startsWith("COK:")) {
+              const n = m.slice(4);
+              body = `${n} aday baslik bulundu:\n\n${process.env.DESC}\n\nHangisini degistireceginizi tam baslikla belirtin.`;
+            }
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `Bu baslikla eslesen bir yayin bulunamadi:\n\n${process.env.TITLE}\n\nBasligin tam yazildigindan emin olun (site uzerinden kopyala-yapistir oe ras). Tekrar denerken yeni bir issue acin.`
+              body: body
             });
             await github.rest.issues.update({
               owner: context.repo.owner, repo: context.repo.repo,

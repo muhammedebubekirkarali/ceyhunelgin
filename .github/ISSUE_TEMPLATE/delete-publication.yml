@@ -1,13 +1,13 @@
-name: "Yayin Sil / Duzelt"
-description: "Mevcut bir yayini listeden kaldirin (yeniden duzenlemek icin de kullanilabilir; once silip sonra yeniden ekleyin)."
-title: "Sil: <kisa baslik>"
+name: "Yayin Sil"
+description: "Bir yayini listeden kalirmak icin. Yayini duzeltmek icin 'Yayin Duzelt' formunu kullanin."
+title: "Yayin Sil: <kisa baslik>"
 labels:
   - "yayin-sil"
 body:
   - type: markdown
     attributes:
       value: |
-        Kaldirilacak yayini tespit etmek icin tam basligini yazin.
+        KaldIrilacak yayini tespit etmek icin tam basligini yazin.
         Baslik duzgun yazilirsa arka plandaki islem otomatik bulur ve kaldirir.
 
   - type: input

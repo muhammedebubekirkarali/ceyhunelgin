@@ -1,0 +1,250 @@
+name: Icerik Duzelt
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  edit:
+    if: contains(github.event.issue.labels.*.name, 'icerik-duzelt')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: Kaynak kodu cikar
+        uses: actions/checkout@v4
+
+      - name: Icerigi ilgili JSON'da guncelle
+        shell: python
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          import json, os, re, sys
+          from pathlib import Path
+
+          body = os.environ["ISSUE_BODY"]
+          body = body.replace("\\(", "(").replace("\\)", ")")
+
+          def field(label):
+              marker = "### " + label
+              i = body.find(marker)
+              if i < 0:
+                  return ""
+              started = False
+              val_lines = []
+              for ln in body[i + len(marker):].split("\n")[1:]:
+                  if ln.startswith("### "):
+                      break
+                  if not started:
+                      if ln.strip() == "":
+                          continue
+                      started = True
+                      val_lines.append(ln)
+                  else:
+                      val_lines.append(ln)
+              while val_lines and val_lines[-1].strip() == "":
+                  val_lines.pop()
+              val = "\n".join(val_lines).strip()
+              if val in ("", "_No response_"):
+                  return ""
+              return val
+
+          def env(key, val):
+              val = str(val).replace("\n", " ")
+              with open(os.environ["GITHUB_ENV"], "a") as f:
+                  f.write(f"{key}={val}\n")
+
+          def maybe(s):
+              return s.strip() or None
+
+          _cevir = str.maketrans({
+              "ğ":"g","Ğ":"g","ı":"i","İ":"i","ö":"o","Ö":"o","ü":"u","Ü":"u",
+              "ş":"s","Ş":"s","ç":"c","Ç":"c","â":"a","î":"i","û":"u"
+          })
+          def norm(s):
+              return re.sub(r"\s+", " ", s.strip().translate(_cevir)).lower()
+
+          kind = field("Icerik turu").strip().lower()
+          kind = {"kitap":"kitap","proje":"proje","ders":"ders","i̇leti̇şi̇m":"iletisim","iletisim":"iletisim","İletişim":"iletisim"}.get(kind, kind)
+
+          if kind in ("kitap", "proje"):
+              fn = "books.json" if kind == "kitap" else "projects.json"
+              old_title = field("Degisecek kitap/projenin simdiki tam adi").strip()
+              if not old_title:
+                  env("RESULT", "error"); env("MESSAGE", "Degisecek kitap/proje adi bos."); sys.exit(0)
+              data = json.loads(Path(fn).read_text(encoding="utf-8"))
+              nt = norm(old_title)
+              matches = [it for it in data if norm(it["title"]) == nt]
+              if not matches:
+                  matches = [it for it in data if nt in norm(it["title"]) or norm(it["title"]) in nt]
+                  if len(matches) > 1:
+                      env("RESULT", "nomatch"); env("DESC", old_title)
+                      env("MESSAGE", "COK:" + str(len(matches))); sys.exit(0)
+              if not matches:
+                  env("RESULT", "nomatch"); env("DESC", old_title); sys.exit(0)
+              old = matches[0]
+              updated = dict(old)
+              vals = {
+                  "title": field("Yeni baslik (kitap/proje) - opsiyonel").strip(),
+                  "label": field("Yeni etiket (kitap/proje) - opsiyonel").strip(),
+                  "note": field("Yeni not (kitap/proje) - opsiyonel").strip(),
+                  "link": field("Yeni baglanti (kitap/proje) - opsiyonel").strip(),
+                  "link_label": field("Yeni baglanti metni (kitap/proje) - opsiyonel").strip(),
+              }
+              if not any(vals.values()):
+                  env("RESULT", "error"); env("MESSAGE", "Hicbir yeni deger verilmedi."); sys.exit(0)
+              for k, v in vals.items():
+                  if v:
+                      updated[k] = maybe(v)
+              idx = data.index(old)
+              data[idx] = updated
+              Path(fn).write_text(json.dumps(data, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
+              old_clean = old["title"].replace("\n", " ")
+              new_clean = updated["title"].replace("\n", " ")
+              Path("commit_msg.txt").write_text(
+                  f"Icerik duzeltildi (#{os.environ['ISSUE_NUMBER']}): {old_clean} -> {new_clean}\n",
+                  encoding="utf-8",
+              )
+              env("RESULT", "ok"); env("OLD", old_clean); env("NEW", new_clean); env("FILE", fn)
+
+          elif kind == "ders":
+              uni = field("Universite (ders)").strip()
+              cname = field("Degisecek dersin simdiki adi (ders)").strip()
+              if not uni:
+                  env("RESULT", "error"); env("MESSAGE", "Universite bos."); sys.exit(0)
+              if not cname:
+                  env("RESULT", "error"); env("MESSAGE", "Degisecek ders adi bos."); sys.exit(0)
+              new_cname = field("Yeni ders adi (ders) - opsiyonel").strip()
+              level = field("Yeni duzey (ders) - opsiyonel").strip()
+              new_level = None if level in ("", "(degisiklik yok)") else level
+              if not new_cname and not new_level:
+                  env("RESULT", "error"); env("MESSAGE", "Hicbir yeni deger verilmedi."); sys.exit(0)
+              data = json.loads(Path("teaching.json").read_text(encoding="utf-8"))
+              found_u = None
+              for u in data:
+                  if norm(u["university"]) == norm(uni):
+                      found_u = u; break
+              if not found_u:
+                  env("RESULT", "nomatch"); env("DESC", f"{uni} / {cname}"); sys.exit(0)
+              nt = norm(cname)
+              matches = [c for c in found_u["courses"] if norm(c["name"]) == nt]
+              if not matches:
+                  matches = [c for c in found_u["courses"] if nt in norm(c["name"]) or norm(c["name"]) in nt]
+                  if len(matches) > 1:
+                      env("RESULT", "nomatch"); env("DESC", f"{uni} / {cname}")
+                      env("MESSAGE", "COK:" + str(len(matches))); sys.exit(0)
+              if not matches:
+                  env("RESULT", "nomatch"); env("DESC", f"{uni} / {cname}"); sys.exit(0)
+              old = matches[0]
+              updated = dict(old)
+              if new_cname:
+                  updated["name"] = new_cname
+              if new_level:
+                  updated["level"] = new_level
+              idx = found_u["courses"].index(old)
+              found_u["courses"][idx] = updated
+              Path("teaching.json").write_text(json.dumps(data, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
+              old_clean = f"{uni} - {old['name']}".replace("\n", " ")
+              new_clean = f"{uni} - {updated['name']}".replace("\n", " ")
+              Path("commit_msg.txt").write_text(
+                  f"Icerik duzeltildi (#{os.environ['ISSUE_NUMBER']}): {old_clean}\n",
+                  encoding="utf-8",
+              )
+              env("RESULT", "ok"); env("OLD", old_clean); env("NEW", new_clean); env("FILE", "teaching.json")
+
+          elif kind == "iletisim":
+              email = maybe(field("E-posta(lar) - iletisim"))
+              phone = maybe(field("Telefon - iletisim"))
+              links_block = maybe(field("Dis linkler (orijin: URL|Etiket) - iletisim"))
+              mails = [m.strip() for m in (email or "").split("|") if m.strip()] if email else []
+              links = []
+              if links_block:
+                  for line in links_block.splitlines():
+                      line = line.strip()
+                      if not line: continue
+                      parts = line.split("|", 1)
+                      url = parts[0].strip()
+                      label = parts[1].strip() if len(parts) > 1 else url
+                      if url: links.append({"url": url, "label": label})
+              if not mails and not phone and not links:
+                  env("RESULT", "error"); env("MESSAGE", "En az bir alan doldurun."); sys.exit(0)
+              phone_norm = re.sub(r"[^\d+]", "", phone) if phone else None
+              data = {
+                  "mails": mails,
+                  "phone": phone_norm,
+                  "phone_display": phone,
+                  "links": links,
+              }
+              Path("contact.json").write_text(json.dumps(data, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
+              Path("commit_msg.txt").write_text(
+                  f"Icerik duzeltildi (#{os.environ['ISSUE_NUMBER']}): iletisim guncellendi\n",
+                  encoding="utf-8",
+              )
+              env("RESULT", "ok"); env("OLD", "iletisim"); env("NEW", "iletisim guncellendi"); env("FILE", "contact.json")
+
+          else:
+              env("RESULT", "error"); env("MESSAGE", f"Tur bilinmiyor: {kind}"); sys.exit(0)
+
+      - name: Commit + push
+        if: env.RESULT == 'ok'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add books.json projects.json teaching.json contact.json
+          git commit -F commit_msg.txt
+          git push
+          rm -f commit_msg.txt
+
+      - name: Basari yorumu + kapat
+        if: env.RESULT == 'ok'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Icerik guncellendi.\n\n- Eski: ${process.env.OLD}\n- Yeni: ${process.env.NEW}\n- Dosya: ${process.env.FILE}\n\nBir dakika icinde site guncellenir.`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: "closed"
+            });
+
+      - name: Eslesmedi yorumu + kapat
+        if: env.RESULT == 'nomatch'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const m = process.env.MESSAGE || "";
+            let body = `Degisecek oge bulunamadi:\n\n${process.env.DESC}`;
+            if (m.startsWith("COK:")) {
+              body = `${m.slice(4)} aday bulundu:\n\n${process.env.DESC}\n\nHangisini degistireceginizi tam adiyla belirtin.`;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: "closed",
+              labels: ["eslesmedi"]
+            });
+
+      - name: Hata yorumu + kapat
+        if: env.RESULT == 'error'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Form hatali:\n\n${process.env.MESSAGE}`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, state: "closed",
+              labels: ["hatali-form"]
+            });

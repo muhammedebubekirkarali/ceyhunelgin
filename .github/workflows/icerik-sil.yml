@@ -65,7 +65,12 @@ jobs:
           title = field("Kaldirilacak ogenin tam adi").strip()
           uni = field("Universite (yalnizca ders silerken)").strip()
 
-          norm = lambda s: re.sub(r"\s+", " ", s).strip().lower()
+          _cevir = str.maketrans({
+              "ğ":"g","Ğ":"g","ı":"i","İ":"i","ö":"o","Ö":"o","ü":"u","Ü":"u",
+              "ş":"s","Ş":"s","ç":"c","Ç":"c","â":"a","î":"i","û":"u"
+          })
+          def norm(s):
+              return re.sub(r"\s+", " ", s.strip().translate(_cevir)).lower()
 
           if not title:
               env("RESULT", "error"); env("MESSAGE", "Adi bos."); sys.exit(0)

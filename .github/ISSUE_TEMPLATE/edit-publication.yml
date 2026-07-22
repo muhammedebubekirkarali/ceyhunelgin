@@ -1,0 +1,56 @@
+name: "Yayin Duzelt"
+description: "Mevcut bir yayinin bilgilerini guncelleyin. Once degisecek yayini, sonra yeni bilgileri yazin."
+title: "Yayin Duzelt: <kisa baslik>"
+labels:
+  - "yayin-duzelt"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bu form, listede var olan bir yayini yeni bilgilerle gunceller.
+        **Degisecek yayini once tam basligiyla tespit ederiz**, sonra aşağıdaki yeni degerlerle degistiririz.
+
+  - type: input
+    id: old_title
+    attributes:
+      label: "Degisecek yayinin tam basligi (simdiki)"
+      description: "Site uzerindeki mevcut baslik; kopyala-yapistir onerilir."
+      placeholder: "Shadow Economies around the World: Evidence from Metropolitan Areas"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "--- Yeni degerler (degistirmek istemediginiz alanlari bos birakin; bos alanlar mevcut degeri korur) ---"
+
+  - type: input
+    id: year
+    attributes:
+      label: "Yeni Yil (opsiyonel)"
+      placeholder: "2026"
+
+  - type: input
+    id: title
+    attributes:
+      label: "Yeni Baslik (opsiyonel)"
+      description: "Baslik degismeyecekse bos birakin."
+      placeholder: "Shadow Economies around the World: Evidence from Metropolitan Areas"
+
+  - type: input
+    id: authors
+    attributes:
+      label: "Yeni Yazarlar (opsiyonel)"
+      description: "Birden fazla yazarda 'X and Y' seklinde. Yardiz ise bos birakin."
+      placeholder: "Adem Y. Elveren and Eric Budd"
+
+  - type: input
+    id: venue
+    attributes:
+      label: "Yeni Dergi / yayin bilgisi (opsiyonel)"
+      placeholder: "Journal of International Development, 60, 55-80."
+
+  - type: input
+    id: doi
+    attributes:
+      label: "Yeni DOI / Kaynak Baglantisi (opsiyonel)"
+      placeholder: "https://doi.org/10.xxx/xxx"

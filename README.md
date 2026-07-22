@@ -33,13 +33,18 @@ GitHub Issues formu doldurarak** tüm bölümler güncellenebilir.
 └── .github/
     ├── ISSUE_TEMPLATE/
     │   ├── new-publication.yml    # "Yeni Yayın Ekle"
-    │   ├── icerik-ekle.yml         # "İçerik Ekle" (kitap/proje/ders/iletişim)
-    │   └── icerik-sil.yml          # "İçerik Sil" (kitap/proje/ders)
+    │   ├── delete-publication.yml # "Yayın Sil"
+    │   ├── edit-publication.yml   # "Yayın Düzelt"
+    │   ├── icerik-ekle.yml        # "İçerik Ekle" (kitap/proje/ders/iletişim)
+    │   ├── icerik-sil.yml         # "İçerik Sil" (kitap/proje/ders)
+    │   └── icerik-duzelt.yml      # "İçerik Düzelt" (kitap/proje/ders/iletişim)
     └── workflows/
-        ├── add-publication.yml     # Issue → publications.json
+        ├── add-publication.yml     # Issue → publications.json ekle
         ├── delete-publication.yml  # Issue → publications.json sil
-        ├── icerik-ekle.yml         # Issue → ilgili JSON (kitap/proje/ders/iletişim)
-        └── icerik-sil.yml          # Issue → ilgili JSON silme
+        ├── edit-publication.yml    # Issue → publications.json guncelle
+        ├── icerik-ekle.yml         # Issue → ilgili JSON ekle
+        ├── icerik-sil.yml          # Issue → ilgili JSON sil
+        └── icerik-duzelt.yml       # Issue → ilgili JSON guncelle
 ```
 
 ---
@@ -57,10 +62,18 @@ GitHub Issues formu doldurarak** tüm bölümler güncellenebilir.
 4. **Submit** → Action `publications.json`'a ekler, siteyi günceller, issue'ya yanıt bırakır ve kapatır.
 5. Hatalı formda Action hatayı yorum olarak yazar.
 
+### Yayın düzeltmek
+
+1. **"Yayin Duzelt"** formu → önce **düzenlenecek yayının tam başlığını** yazın (simdiki adı).
+2. Sonra istediğiniz yeni değerleri girin (yıl, başlık, yazarlar, dergi, DOI).
+   - Değiştirmek istemediğiniz alanları **boş bırakın** — mevcut değerler korunur.
+3. **Submit** → Action eski yayını bulup yeni değerlerle günceller; site yenilenir.
+4. Birden fazla başlık eşleşirse ("Shadow" gibi), Action "tam başlık yazın" uyarısı verir.
+
 ### Yayın silmek
 
-1. **"Yayin Sil / Duzelt"** formu → yayının **tam başlığını** yazın.
-2. Action başlığa göre bulup JSON'dan çıkarır. Çok esnek (büyük/küçük harf, baş/son boşluk duyarsız).
+1. **"Yayin Sil"** formu → yayının **tam başlığını** yazın.
+2. Action başlığa göre bulup JSON'dan çıkarır. Büyük/küçük harf, baş/son boşluk ve Türkçe karakter (`ğ↔g`, `ı↔i` vb.) duyarsız eşleşir.
 
 ### Kitap / Proje / Ders eklemek
 
@@ -71,11 +84,20 @@ GitHub Issues formu doldurarak** tüm bölümler güncellenebilir.
    - **İletişim**: Tüm iletişim bölümünü girdiklerinizle **değiştirir** (ek değil). Mail'leri `|` ile ayırın; dış linkleri her satıra bir tane `URL|Etiket` biçiminde yazın.
 3. **Submit** → ilgili JSON güncellenir, site yenilenir.
 
+### Kitap / Proje / Ders / İletişim düzeltmek
+
+1. **"Icerik Duzelt"** formu → türü seçin.
+   - **Kitap/Proje**: mevcut tam adı yazın → yeni değerleri gir (boş alanlar korunur).
+   - **Ders**: üniversite, mevcut ders adı → yeni ad veya düzey (boş ise korunur).
+   - **İletişim**: tüm değerleri girdiklerinizle değiştirir (boş alanlar boş kalır).
+2. Birden fazla eşleşmede "tam ad yazın" uyarısı gelir.
+
 ### Kitap / Proje / Ders silmek
 
-1. **"Icerik Sil / Duzelt"** formu → tür seçin → kaldırılacak öğenin tam adını yazın.
+1. **"Icerik Sil"** formu → tür seçin → kaldırılacak öğenin tam adını yazın.
    - Ders silerken üniversite adını da yazın (hangi üniversiteden silineceğini belirler).
 2. Action eşleşen öğeyi bulup JSON'dan çıkarır. Bir üniversitenin son dersi silinirse üniversite kartı da otomatik kalkar.
+
 
 ### Fotoğrafı değiştirme
 

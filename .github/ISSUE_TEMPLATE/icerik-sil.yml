@@ -1,5 +1,5 @@
-name: "Icerik Sil / Duzelt"
-description: "Kitap, proje, ders veya iletisim bolumunden bir ogeyi kaldirin. Yayin icin ayri 'Yayin Sil / Duzelt' formunu kullanin."
+name: "Icerik Sil"
+description: "Kitap, proje veya ders bolumunden bir ogeyi kaldirin. Duzeltmek icin 'Icerik Duzelt' formunu kullanin."
 title: "Sil: <tur> - <kisa baslik>"
 labels:
   - "icerik-sil"
