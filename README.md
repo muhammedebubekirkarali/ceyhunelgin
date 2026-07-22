@@ -34,8 +34,8 @@ tarayıcıdaki yönetim panelinden** tüm bölümler güncellenebilir.
 │   ├── favicon.svg
 │   └── photo.jpg       # Hero bölümündeki portre fotoğrafı
 ├── admin/
-│   ├── admin.html      # Yönetim paneli (giriş + formlar)
-│   └── admin.js        # GitHub Contents API client (vanilla JS, bağımlılık yok)
+│   ├── index.html     # Yönetim paneli (giriş + formlar) — /admin/ adresinde açılır
+│   └── admin.js       # GitHub Contents API client (vanilla JS, bağımlılık yok)
 └── .nojekyll           # GitHub Pages'in admin/ klasörünü olduğu gibi sunması için
 ```
 
