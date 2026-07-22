@@ -26,6 +26,9 @@ jobs:
           from pathlib import Path
 
           body = os.environ["ISSUE_BODY"]
+          # GitHub Issue Forms parantezli label'lari '\(' '\)' olarak escape eder;
+          # normalize ederek arama yapariz.
+          body = body.replace("\\(", "(").replace("\\)", ")")
 
           def field(label):
               marker = "### " + label
@@ -53,6 +56,8 @@ jobs:
               return val
 
           def env(key, val):
+              # tek satira indir (K5: GITHUB_ENV injection onlemi)
+              val = str(val).replace("\n", " ")
               with open(os.environ["GITHUB_ENV"], "a") as f:
                   f.write(f"{key}={val}\n")
 
@@ -83,7 +88,12 @@ jobs:
               data = json.loads(Path(fn).read_text(encoding="utf-8"))
               data.append(item)
               Path(fn).write_text(json.dumps(data, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
-              env("RESULT", "ok"); env("FILE", fn); env("DESC", desc); env("COUNT", str(len(data)))
+              desc_clean = (desc or title).replace("\n", " ")
+              Path("commit_msg.txt").write_text(
+                  f"Icerik eklendi (#{os.environ['ISSUE_NUMBER']}): {desc_clean}\n",
+                  encoding="utf-8",
+              )
+              env("RESULT", "ok"); env("FILE", fn); env("DESC", desc_clean); env("COUNT", str(len(data)))
 
           elif kind == "ders":
               uni = field("Universite (ders)")
@@ -104,7 +114,12 @@ jobs:
                   data.append(found)
               found["courses"].append({"name": cname, "level": level or "B.A."})
               Path("teaching.json").write_text(json.dumps(data, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
-              env("RESULT", "ok"); env("FILE", "teaching.json"); env("DESC", desc); env("COUNT", str(sum(len(u["courses"]) for u in data)))
+              desc_clean = desc.replace("\n", " ")
+              Path("commit_msg.txt").write_text(
+                  f"Icerik eklendi (#{os.environ['ISSUE_NUMBER']}): {desc_clean}\n",
+                  encoding="utf-8",
+              )
+              env("RESULT", "ok"); env("FILE", "teaching.json"); env("DESC", desc_clean); env("COUNT", str(sum(len(u["courses"]) for u in data)))
 
           elif kind == "iletisim":
               email = maybe(field("E-posta(lar)"))
@@ -122,14 +137,26 @@ jobs:
                       label = parts[1].strip() if len(parts) > 1 else url
                       if url:
                           links.append({"url": url, "label": label})
+              if not mails and not phone and not links:
+                  errs.append("Iletisim guncellemek icin en az bir alan (e-posta, telefon veya link) doldurun.")
+                  env("RESULT", "error"); env("MESSAGE", "; ".join(errs)); sys.exit(0)
+              # telefonu tel: icin normalize (rakam ve +), gorunur hali aynen
+              phone_norm = None
+              phone_disp = phone
+              if phone:
+                  phone_norm = re.sub(r"[^\d+]", "", phone)
               data = {
                   "mails": mails,
-                  "phone": phone,
-                  "phone_display": None,
+                  "phone": phone_norm,
+                  "phone_display": phone_disp,
                   "links": links,
               }
               Path("contact.json").write_text(json.dumps(data, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
-              env("RESULT", "ok"); env("FILE", "contact.json"); env("DESC", "iletisim guncellendi"); env("COUNT", "1")
+              Path("commit_msg.txt").write_text(
+                  f"Icerik eklendi (#{os.environ['ISSUE_NUMBER']}): iletisim guncellendi\n",
+                  encoding="utf-8",
+              )
+              env("RESULT", "ok"); env("FILE", "contact.json"); env("DESC", "iletisim guncellendi".replace("\n", " ")); env("COUNT", "1")
 
           else:
               env("RESULT", "error"); env("MESSAGE", f"Tur bilinmiyor: {kind}"); sys.exit(0)
@@ -140,8 +167,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add books.json projects.json teaching.json contact.json
-          git commit -m "Icerik eklendi (#${{ github.event.issue.number }}): ${{ env.DESC }}"
+          git commit -F commit_msg.txt
           git push
+          rm -f commit_msg.txt
 
       - name: Basari yorumu + kapat
         if: env.RESULT == 'ok'

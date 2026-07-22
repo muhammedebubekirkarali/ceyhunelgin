@@ -26,6 +26,9 @@ jobs:
           from pathlib import Path
 
           body = os.environ["ISSUE_BODY"]
+          # GitHub Issue Forms parantezli label'lari '\(' '\)' olarak escape eder;
+          # normalize ederek arama yapariz.
+          body = body.replace("\\(", "(").replace("\\)", ")")
 
           def field(label):
               marker = "### " + label
@@ -54,50 +57,49 @@ jobs:
 
           title = field("Kaldirilacak yayinin tam basligi").strip()
           if not title:
-              Path(os.environ["GITHUB_ENV"]).write_text(
-                  "RESULT=error\nMESSAGE=Baslik bos.\n"
-              )
+              with open(os.environ["GITHUB_ENV"], "a") as _e:
+                  _e.write("RESULT=error\nMESSAGE=Baslik bos.\n")
               sys.exit(0)
 
           pj = Path("publications.json")
           data = json.loads(pj.read_text(encoding="utf-8"))
 
-          # once tam eslesme dene; yoksa case-insensitive + bosluk-normalize
-          target = title
-          match = None
-          for p in data:
-              if p["title"] == target:
-                  match = p
-                  break
-          if not match:
-              norm = lambda s: re.sub(r"\s+", " ", s).strip().lower()
-              nt = norm(target)
-              for p in data:
-                  if norm(p["title"]) == nt:
-                      match = p
-                      break
-              if not match:
-                  # iceren
-                  for p in data:
-                      if nt in norm(p["title"]) or norm(p["title"]) in nt:
-                          match = p
-                          break
+          # 1) birebir normalize eslesme (case + bosluk duyarsiz)
+          norm = lambda s: re.sub(r"\s+", " ", s).strip().lower()
+          nt = norm(title)
+          matches = [p for p in data if norm(p["title"]) == nt]
+          if not matches:
+              # 2) tek eslesme iceren (cok eslesirse guvenlik icin nomatch)
+              matches = [p for p in data if nt in norm(p["title"]) or norm(p["title"]) in nt]
+              if len(matches) > 1:
+                  with open(os.environ["GITHUB_ENV"], "a") as _e:
+                      _e.write("RESULT=nomatch\n")
+                      _e.write("TITLE=" + title.replace("\n", " ") + "\n")
+                      _e.write("MESSAGE=" + str(len(matches)) + " aday baslik bulundu; tam baslik yazin.\n")
+                  sys.exit(0)
 
-          if not match:
-              Path(os.environ["GITHUB_ENV"]).write_text(
-                  f"RESULT=nomatch\nTITLE={title}\n"
-              )
+          if not matches:
+              with open(os.environ["GITHUB_ENV"], "a") as _e:
+                  _e.write("RESULT=nomatch\n")
+                  _e.write("TITLE=" + title.replace("\n", " ") + "\n")
               sys.exit(0)
 
+          match = matches[0]
           data2 = [p for p in data if p is not match]
           pj.write_text(
               json.dumps(data2, ensure_ascii=False, indent=2) + "\n",
               encoding="utf-8",
           )
-
-          Path(os.environ["GITHUB_ENV"]).write_text(
-              f"RESULT=ok\nTITLE={match['title']}\nYEAR={match.get('year','')}\nCOUNT={len(data2)}\n"
+          title_clean = match["title"].replace("\n", " ")
+          Path("commit_msg.txt").write_text(
+              f"Yayin silindi (#{os.environ['ISSUE_NUMBER']}): {title_clean}\n",
+              encoding="utf-8",
           )
+          with open(os.environ["GITHUB_ENV"], "a") as _e:
+              _e.write("RESULT=ok\n")
+              _e.write("TITLE=" + title_clean + "\n")
+              _e.write(f"YEAR={match.get('year','')}\n")
+              _e.write(f"COUNT={len(data2)}\n")
           print("Silindi:", match["title"])
 
       - name: Commit + push
@@ -106,8 +108,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add publications.json
-          git commit -m "Yayin silindi (#${{ github.event.issue.number }}): ${{ env.TITLE }}"
+          git commit -F commit_msg.txt
           git push
+          rm -f commit_msg.txt
 
       - name: Basari yorumu + kapat
         if: env.RESULT == 'ok'

@@ -27,15 +27,9 @@ const I18N = {
     'facts.office': 'Office', 'facts.phone': 'Phone',
     'stats.pubs': 'Publications', 'stats.books': 'Books', 'stats.unis': 'Universities', 'stats.links': 'DOI / Source Links',
     'books.title': 'Books',
-    'books.amazon': 'View on Amazon →', 'books.amazon2': 'View on Amazon →',
-    'books.b4label': 'Edited Volume · Routledge, 2024', 'books.b4note': 'Editor — New York: Routledge',
-    'books.b5label': 'Monograph · Routledge, 2021',
     'projects.title': 'Projects & Media',
-    'projects.p1note': 'YouTube channel on economics, in Turkish.', 'projects.p1link': 'Watch on YouTube →',
-    'projects.p2label': 'Dataset / Index', 'projects.p2link': 'Explore the index →',
-    'projects.p3label': 'EU Funded', 'projects.p3link': 'Project page →',
     'pubs.title': 'Publications',
-    'pubs.intro': '126 journal articles, book chapters and books — grouped by year. Click a year to expand.',
+    'pubs.intro': '{n} journal articles, book chapters and books — grouped by year. Click a year to expand.',
     'pubs.search': 'Filter publications… (e.g. informality, COVID, growth)',
     'pubs.expandAll': 'Expand all', 'pubs.collapseAll': 'Collapse all',
     'pubs.found': '{n} matching publications', 'pubs.none': 'No publications found',
@@ -43,10 +37,10 @@ const I18N = {
     'contact.title': 'Contact', 'contact.mail': 'E-mail', 'contact.phone': 'Phone',
     'contact.addr': 'Address',
     'contact.addr.v': 'Boğaziçi University, Department of Economics<br>Bebek, 34342 Beşiktaş / İstanbul, Türkiye',
-    'contact.links': 'Links', 'contact.faculty': 'Boğaziçi faculty page',
+    'contact.links': 'Links',
     'footer.tag': 'Professor of Economics, Boğaziçi University',
     'footer.line': '© 2026 Ceyhun Elgin · All rights reserved.',
-    'pubsrc.source': 'Source / DOI', 'pubsrc.repec': 'RePEc record', 'pubsrc.book': 'Book page'
+    'pubsrc.source': 'Source / DOI'
   },
   tr: {
     'meta.title': 'Ceyhun Elgin — İktisat Profesörü, Boğaziçi Üniversitesi',
@@ -69,15 +63,9 @@ const I18N = {
     'facts.office': 'Ofis', 'facts.phone': 'Telefon',
     'stats.pubs': 'Yayın', 'stats.books': 'Kitap', 'stats.unis': 'Üniversite', 'stats.links': 'DOI / Kaynak Bağlantısı',
     'books.title': 'Kitaplar',
-    'books.amazon': "Amazon'da görüntüle →", 'books.amazon2': "Amazon'da görüntüle →",
-    'books.b4label': 'Derleme · Routledge, 2024', 'books.b4note': 'Editör — New York: Routledge',
-    'books.b5label': 'Monografi · Routledge, 2021',
     'projects.title': 'Projeler ve Medya',
-    'projects.p1note': 'Ekonomi üzerine Türkçe YouTube kanalı.', 'projects.p1link': "YouTube'da izle →",
-    'projects.p2label': 'Veri Seti / Endeks', 'projects.p2link': 'Endeksi incele →',
-    'projects.p3label': 'AB Destekli', 'projects.p3link': 'Proje sayfası →',
     'pubs.title': 'Yayınlar',
-    'pubs.intro': '126 makale, kitap bölümü ve kitap — yıllara göre gruplandırıldı. Açmak için bir yıla tıklayın.',
+    'pubs.intro': '{n} makale, kitap bölümü ve kitap — yıllara göre gruplandırıldı. Açmak için bir yıla tıklayın.',
     'pubs.search': 'Yayınlarda ara… (örn. kayıt dışı, COVID, büyüme)',
     'pubs.expandAll': 'Tümünü aç', 'pubs.collapseAll': 'Tümünü kapat',
     'pubs.found': '{n} yayın bulundu', 'pubs.none': 'Yayın bulunamadı',
@@ -85,10 +73,10 @@ const I18N = {
     'contact.title': 'İletişim', 'contact.mail': 'E-posta', 'contact.phone': 'Telefon',
     'contact.addr': 'Adres',
     'contact.addr.v': 'Boğaziçi Üniversitesi, İktisat Bölümü<br>Bebek, 34342 Beşiktaş / İstanbul, Türkiye',
-    'contact.links': 'Bağlantılar', 'contact.faculty': 'Boğaziçi fakülte sayfası',
+    'contact.links': 'Bağlantılar',
     'footer.tag': 'İktisat Profesörü, Boğaziçi Üniversitesi',
     'footer.line': '© 2026 Ceyhun Elgin · Tüm hakları saklıdır.',
-    'pubsrc.source': 'Kaynak / DOI', 'pubsrc.repec': 'RePEc kaydı', 'pubsrc.book': 'Kitap sayfası'
+    'pubsrc.source': 'Kaynak / DOI'
   }
 };
 
@@ -163,6 +151,7 @@ function renderPubs(pubs) {
   yearBlocks = [...pubsList.querySelectorAll('details.year')];
   yearBlocks.forEach((d) => {
     d.dataset.count = d.querySelector('.year__count').textContent;
+    observeReveal(d);
   });
 
   // pub-src data-kind baslik siniflandirmasi (mevcut ilklendirme mantigi)
@@ -177,11 +166,11 @@ function renderPubs(pubs) {
 
 function updateCounts(total) {
   const introEl = document.querySelector('.section__intro[data-i18n="pubs.intro"]');
-  if (introEl) introEl.textContent = t('pubs.intro').replace('126', total);
-  const statNum = document.querySelector('.stat__num');
-  // ilk .stat numarasi = Publications stat; stat__num'larin ilki
-  const statNums = document.querySelectorAll('.stat__num');
-  if (statNums[0]) statNums[0].textContent = total;
+  if (introEl) {
+    // hem '126' literal hem '{n}' placeholder deste
+    introEl.textContent = t('pubs.intro').replace(/\{n\}|\d+/, String(total));
+  }
+  setStat(0, total);
 }
 
 function resetFilter() {
@@ -197,7 +186,7 @@ function resetFilter() {
 function runFilter() {
   const q = searchInput.value.trim().toLowerCase();
   if (q.length === 0) { resetFilter(); return; }
-  if (q.length < 2) return;
+  if (q.length < 2) { resetFilter(); status.textContent = ''; return; }
 
   let total = 0;
   yearBlocks.forEach((d) => {
@@ -248,18 +237,24 @@ const AWARD_ICON = '<span class="card__icon"><svg class="ic" viewBox="0 0 24 24"
 
 function cardIcon(label) {
   if (!label) return BOOK_ICON;
-  const l = label.toLowerCase();
-  if (l.includes('youtube')) return YT_ICON;
-  if (l.includes('dataset') || l.includes('index') || l.includes('endeks') || l.includes('veri')) return INDEX_ICON;
-  if (l.includes('eu') || l.includes('ab') || l.includes('funded') || l.includes('destek')) return AWARD_ICON;
+  // kelime-bazli eslesme (O2: substring false-positive onlenir)
+  const re = (s) => new RegExp('\\b' + s + '\\b', 'i');
+  if (re('youtube').test(label)) return YT_ICON;
+  if (/\b(dataset|index|endeks|veri)\b/i.test(label)) return INDEX_ICON;
+  if (/\b(eu|ab|funded|destek)\b/i.test(label)) return AWARD_ICON;
   return BOOK_ICON;
 }
 
 let booksData = [], projectsData = [], teachingData = [], contactData = null;
 
+function setStat(index, value) {
+  const nums = document.querySelectorAll('.stat__num');
+  if (nums[index]) nums[index].textContent = value;
+}
+
 function renderCard(item, container) {
   let html = '<article class="card">';
-  html += cardIcon(item.label);
+  html += cardIcon(item.label || '');
   if (item.label) html += '<p class="card__label">' + escapeHtml(item.label) + '</p>';
   if (item.title) html += '<h3 class="card__title">' + escapeHtml(item.title) + '</h3>';
   if (item.note) html += '<p class="card__note">' + escapeHtml(item.note) + '</p>';
@@ -273,6 +268,8 @@ function renderBooks(items) {
   const c = document.getElementById('booksList');
   if (!c) return;
   c.innerHTML = '<div class="cards">' + items.map((it) => renderCard(it, c)).join('') + '</div>';
+  c.querySelectorAll('.card').forEach((el) => observeReveal(el));
+  setStat(1, items.length);
 }
 
 function renderProjects(items) {
@@ -280,6 +277,7 @@ function renderProjects(items) {
   const c = document.getElementById('projectsList');
   if (!c) return;
   c.innerHTML = '<div class="cards">' + items.map((it) => renderCard(it, c)).join('') + '</div>';
+  c.querySelectorAll('.card').forEach((el) => observeReveal(el));
 }
 
 function renderTeaching(items) {
@@ -289,15 +287,17 @@ function renderTeaching(items) {
   let html = '<div class="teach-grid">';
   items.forEach((u) => {
     html += '<article class="teach">';
-    html += '<h3>' + escapeHtml(u.university) + '</h3>';
+    html += '<h3>' + escapeHtml(u.university || '') + '</h3>';
     html += '<ul>';
     (u.courses || []).forEach((co) => {
-      html += '<li>' + escapeHtml(co.name) + ' <span class="teach__level">' + escapeHtml(co.level) + '</span></li>';
+      html += '<li>' + escapeHtml(co.name || '') + ' <span class="teach__level">' + escapeHtml(co.level || '') + '</span></li>';
     });
     html += '</ul></article>';
   });
   html += '</div>';
   c.innerHTML = html;
+  c.querySelectorAll('.teach').forEach((el) => observeReveal(el));
+  setStat(2, items.length);
 }
 
 function renderContact(data) {
@@ -319,17 +319,22 @@ function renderContact(data) {
     html += '<div class="contact__item"><h3>' + phoneIcon + '<span data-i18n="contact.phone">Phone</span></h3><p>'
       + '<a href="tel:' + escapeHtml(data.phone) + '">' + escapeHtml(data.phone_display || data.phone) + '</a></p></div>';
   }
-  // address (i18n contact.addr.v)
-  const addr = (LANG === 'tr') ? t('contact.addr.v') : t('contact.addr.v');
+  // address (i18n contact.addr.v) — guvenilir sabit, innerHTML ile (K3: <br> bozulmaz)
+  const addr = t('contact.addr.v');
   html += '<div class="contact__item"><h3>' + addrIcon + '<span data-i18n="contact.addr">Address</span></h3><p data-i18n="contact.addr.v">'
-    + escapeHtml(addr) + '</p></div>';
+    + addr + '</p></div>';
   // links
   html += '<div class="contact__item"><h3>' + linkIcon + '<span data-i18n="contact.links">Links</span></h3><p>';
   const linksHtml = (data.links || []).map((l) => '<a href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">' + escapeHtml(l.label) + '</a>').join('<br>\n');
   html += linksHtml + '</p></div>';
   html += '</div>';
   c.innerHTML = html;
-  // address update'indedil degisince guncellenecek
+  // DOI/link sayisini guncelle: pubs DOI + books link + projects link + contact links
+  const pubDois = allPubs.filter((p) => p.doi).length;
+  const bookLinks = booksData.filter((b) => b.link).length;
+  const projLinks = projectsData.filter((p) => p.link).length;
+  setStat(3, pubDois + bookLinks + projLinks + (data.links || []).length + '+');
+  c.querySelectorAll('.contact__item').forEach((el) => observeReveal(el));
 }
 
 // 4 dosyayi fetch ile yukle
@@ -445,12 +450,12 @@ window.addEventListener(
 toTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
 // ---------- Scroll reveal ----------
-// Not: .year'ler publications.json'dan async render edildiginden reveal'a
-// dahil edilmez; renderPubs icinde gerekirse visible baslangic yapilir.
+// .year'ler ve render edilen .card/.teach/.contact__item async gelir; bu yuzden
+// revealEls burada yalnizca statik DOM elemanlarini yakalar; render foksiyonlari
+// kendi elemanlarini dinamik olarak observe eder (observeReveal).
 const revealEls = document.querySelectorAll(
-  '.section__title, .section__intro, .card, .teach, .contact__item, .stat, .pub-toolbar'
+  '.section__title, .section__intro, .stat, .pub-toolbar'
 );
-revealEls.forEach((el) => el.classList.add('reveal'));
 const revealObs = new IntersectionObserver(
   (entries) => {
     entries.forEach((entry) => {
@@ -462,7 +467,12 @@ const revealObs = new IntersectionObserver(
   },
   { rootMargin: '0px 0px -8% 0px', threshold: 0.05 }
 );
-revealEls.forEach((el) => revealObs.observe(el));
+function observeReveal(scope) {
+  if (!scope) return;
+  scope.classList.add('reveal');
+  revealObs.observe(scope);
+}
+revealEls.forEach((el) => observeReveal(el));
 
 // ---------- Init ----------
 const urlParams = new URLSearchParams(location.search);

@@ -27,6 +27,9 @@ jobs:
           from pathlib import Path
 
           body = os.environ["ISSUE_BODY"]
+          # GitHub Issue Forms parantezli label'lari '\(' '\)' olarak escape eder;
+          # normalize ederek arama yapariz.
+          body = body.replace("\\(", "(").replace("\\)", ")")
 
           # Form cevaplarini ayikla: GitHub "### Label\n\nvalue\n" seklinde yazar
           def field(label):
@@ -77,10 +80,10 @@ jobs:
           if errs:
               print("VALIDATION_ERRORS")
               print("\n".join(errs))
-              # hata bayragini dosyaya yaz ki sonraki step okusun
-              Path(os.environ["GITHUB_ENV"]).write_text(
-                  f"RESULT=error\nMESSAGE=" + "; ".join(errs) + "\n"
-              )
+              # hata bayragini dosyaya yaz ki sonraki step okusun (APPEND, tek satir)
+              with open(os.environ["GITHUB_ENV"], "a") as _e:
+                  _e.write("RESULT=error\n")
+                  _e.write("MESSAGE=" + "; ".join(errs).replace("\n", " ") + "\n")
               sys.exit(0)
 
           # publication nesnesi
@@ -102,9 +105,17 @@ jobs:
               encoding="utf-8",
           )
 
-          Path(os.environ["GITHUB_ENV"]).write_text(
-              f"RESULT=ok\nYEAR={year}\nTITLE={title}\nCOUNT={len(data)}\n"
+          # Title'i tek-satirlik dosyaya yaz; commit -F ile guvenli beslenir (K4)
+          title_clean = title.replace("\n", " ")
+          Path("commit_msg.txt").write_text(
+              f"Yayin eklendi (#{os.environ['ISSUE_NUMBER']}): {title_clean}\n",
+              encoding="utf-8",
           )
+          with open(os.environ["GITHUB_ENV"], "a") as _e:
+              _e.write("RESULT=ok\n")
+              _e.write(f"YEAR={year}\n")
+              _e.write("TITLE=" + title_clean + "\n")
+              _e.write(f"COUNT={len(data)}\n")
           print("OK added:", title)
 
       - name: Commit + push
@@ -113,8 +124,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add publications.json
-          git commit -m "Yayin eklendi (#${{ github.event.issue.number }}): ${{ env.TITLE }}"
+          git commit -F commit_msg.txt
           git push
+          rm -f commit_msg.txt
 
       - name: Issue'ya basari yorumu + kapat
         if: env.RESULT == 'ok'
