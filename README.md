@@ -131,10 +131,11 @@ ve JSON-LD bloğunda:
 Bu dört yer dışında tüm yollar görecelidir (`assets/...`, `css/...`, `js/...`,
 `admin/...`), yani kök alan adına taşınırken ek bir değişiklik gerektirmez.
 
-> Site başka bir **depoya** taşınırsa ayrıca `admin/admin.js` dosyasındaki
-> `FALLBACK_REPO` sabiti yeni depoyu gösterecek şekilde güncellenmelidir;
-> aksi hâlde yönetim paneli eski depoya yazar (bkz. `DOMAIN-KURULUM.md`
-> Bölüm 6).
+> `admin/admin.js` dosyasındaki `FALLBACK_REPO` sabiti teslimde
+> `ceyhunelgin/ceyhunelgin` olarak ayarlı gelir; repo önerildiği gibi
+> `ceyhunelgin` adıyla açıldıysa ek işlem gerekmez. Farklı adlı bir depoya
+> taşınılırsa sabit güncellenmelidir, aksi hâlde yönetim paneli yanlış depoya
+> yazar (bkz. `DOMAIN-KURULUM.md` Bölüm 6).
 
 ## Alternatif: JSON'u elle güncellemek
 

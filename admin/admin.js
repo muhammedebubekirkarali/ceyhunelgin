@@ -5,10 +5,12 @@
 const API = 'https://api.github.com';
 
 // Ozel alan adinda (ceyhunelgin.com) panel hangi depoya yazacagini URL'den
-// tespit edemez; bu sabit kullanilir. SITE BASKA BIR REPOYA TASINIRSA
-// YALNIZCA BU SATIR GUNCELLENIR (bkz. DOMAIN-KURULUM.md Bolum 6).
-// Kod degistirmeden gecici cozum: paneli /admin/?repo=kullanici/repo ile acmak.
-const FALLBACK_REPO = 'muhammedebubekirkarali/ceyhunelgin';
+// tespit edemez; bu sabit kullanilir. Hocanin deposu: ceyhunelgin/ceyhunelgin
+// (kullanici adi: ceyhunelgin, repo adi: ceyhunelgin — devirde ek duzenleme
+// gerekmiyor). Repo adi farkli secilirse YALNIZCA BU SATIR GUNCELLENIR
+// (bkz. DOMAIN-KURULUM.md Bolum 6) ya da panel /admin/?repo=kullanici/repo
+// ile acilir.
+const FALLBACK_REPO = 'ceyhunelgin/ceyhunelgin';
 
 const FILES = {
   pubs: 'publications.json',
