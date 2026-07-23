@@ -3,6 +3,13 @@
 // Token localStorage'da saklanır, hiçbir sunucu üzerinden geçmez.
 
 const API = 'https://api.github.com';
+
+// Ozel alan adinda (ceyhunelgin.com) panel hangi depoya yazacagini URL'den
+// tespit edemez; bu sabit kullanilir. SITE BASKA BIR REPOYA TASINIRSA
+// YALNIZCA BU SATIR GUNCELLENIR (bkz. DOMAIN-KURULUM.md Bolum 6).
+// Kod degistirmeden gecici cozum: paneli /admin/?repo=kullanici/repo ile acmak.
+const FALLBACK_REPO = 'muhammedebubekirkarali/ceyhunelgin';
+
 const FILES = {
   pubs: 'publications.json',
   books: 'books.json',
@@ -30,6 +37,22 @@ function restore() {
   try { const v = JSON.parse(localStorage.getItem('ceyhunelgin-admin')||'{}'); return v; } catch(e){ return {}; }
 }
 
+// UTF-8 guvenli base64 kodlayici/cozucu (Turkce karakterler bozulmaz)
+function b64decode(b64) {
+  const bin = atob(b64.replace(/\n/g, ''));
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+function b64encode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  const CHUNK = 0x8000; // apply arguman sinirina takilmamak icin parcala
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
+}
+
 async function gh(path, opts={}) {
   const url = `${API}/repos/${state.repo}/contents/${path}?ref=${state.branch}`;
   const r = await fetch(url, { headers: { Authorization: `Bearer ${state.token}`, Accept:'application/vnd.github+json' }, ...opts });
@@ -42,9 +65,7 @@ async function loadFile(filename) {
   if (state.cache[filename]) return state.cache[filename];
   const meta = await gh(filename);
   if (!meta) { state.cache[filename] = { data: null, sha: null }; return state.cache[filename]; }
-  // atob latin1 string verir; Turkce/UTF-8 icin decode et (K1)
-  const bin = atob(meta.content.replace(/\n/g, ''));
-  const data = JSON.parse(decodeURIComponent(escape(bin)));
+  const data = JSON.parse(b64decode(meta.content));
   state.cache[filename] = { data, sha: meta.sha };
   return state.cache[filename];
 }
@@ -53,7 +74,7 @@ async function saveFile(filename, data) {
   const cur = state.cache[filename];
   const body = {
     message: `Panel: ${filename} guncellendi`,
-    content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + '\n'))),
+    content: b64encode(JSON.stringify(data, null, 2) + '\n'),
     branch: state.branch,
     sha: cur ? cur.sha : undefined,
   };
@@ -74,11 +95,17 @@ async function saveFile(filename, data) {
 }
 
 // ---------- Giris ----------
-// Repo+dal otomatik: URL'den /kullanici/github.io deseni veya /<repo>/ alti
-// tespit edilir; hocanin ellemesine gerek yok. Fallback sabit altta.
+// Repo+dal otomatik tespit edilir; hocanin ellemesine gerek yok.
+// Oncelik: 1) ?repo= parametresi  2) *.github.io deseni  3) FALLBACK_REPO
 function detectRepo() {
-  // https://KULLANICI.github.io/REPO/admin/ -> KULLANICI/REPO
-  // https://alan.com/admin/ -> KULLANICI/REPO ( DOMAIN.const.REPO )
+  // 1) acik secim: /admin/?repo=kullanici/repo (tarayicida hatirlanir)
+  try {
+    const q = new URLSearchParams(location.search).get('repo');
+    if (q && /^[\w.-]+\/[\w.-]+$/.test(q)) { localStorage.setItem('ceyhunelgin-repo', q); return q; }
+    const s = localStorage.getItem('ceyhunelgin-repo');
+    if (s && /^[\w.-]+\/[\w.-]+$/.test(s)) return s;
+  } catch (e) { /* private mode */ }
+  // 2) https://KULLANICI.github.io/REPO/admin/ -> KULLANICI/REPO
   const m = location.host.match(/^([a-z0-9-]+)\.github\.io$/i);
   if (m) {
     // pathname: /REPO/admin/ veya /REPO/ veya /admin/ (kullanicinin kullanici.github.io reposu)
@@ -87,8 +114,8 @@ function detectRepo() {
     // kullanici.github.io reposunun kendisi (kullanici/kullanici.github.io)
     return m[1] + '/' + m[1] + '.github.io';
   }
-  // ozel alan adi: sabit konfigurasyon (hocanin gercek deposeri)
-  return 'muhammedebubekirkarali/ceyhunelgin';
+  // 3) ozel alan adi: sabit konfigurasyon (dosyanin basindaki FALLBACK_REPO)
+  return FALLBACK_REPO;
 }
 const AUTO_BRANCH = 'main';
 
@@ -104,7 +131,7 @@ $('btn-login').addEventListener('click', async () => {
     // erisim kontrolu: repo'yu okuyabiliyor mu?
     try {
       const rr = await fetch(`${API}/repos/${repo}`, { headers: { Authorization:`Bearer ${token}`, Accept:'application/vnd.github+json' }});
-      if (!rr.ok) throw new Error(`Bu token ${repo} deposuna erişemiyor. Token'a 'repo' yetkisi verildiğinden emin olun.`);
+      if (!rr.ok) throw new Error(`Bu token "${repo}" deposuna erişemiyor. Fine-grained token'da doğru depo seçimi + 'Contents: Read and write' yetkisi (classic token'da 'repo' yetkisi) gerekli.`);
     } catch(e) { throw e; }
     persist();
     $('login-err').classList.add('hidden');
@@ -391,7 +418,7 @@ window.saveContact = async function() {
   } catch(e){ toast('Hata: '+e.message,'err'); }
 };
 
-// ---- Ekmek ----
+// ---- Global erisim (satir ici onclick'ler icin) ----
 window.addRec = addRec;
 
 // Otomatik giris (kayıtlıysa)

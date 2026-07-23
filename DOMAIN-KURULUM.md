@@ -130,6 +130,7 @@ Alan adı bağlandıktan sonra, paylaşımda doğru önizleme görünmesi için
 `index.html` `<head>` içindeki mutlak bağlantılar güncel olmalıdır:
 
 ```html
+<link rel="canonical" href="https://ceyhunelgin.com/">
 <meta property="og:url" content="https://ceyhunelgin.com/">
 <meta property="og:image" content="https://ceyhunelgin.com/assets/photo.jpg">
 ```
@@ -141,7 +142,29 @@ ve JSON-LD:
 ```
 
 Bu dosya teslim edildiğinde bu değerler zaten `https://ceyhunelgin.com/` olarak
-yazılıdır. Farklı bir alan adı kullanılırsa yalnızca bu üç satır değiştirilir.
+yazılıdır. Farklı bir alan adı kullanılırsa yalnızca bu dört satır değiştirilir.
+
+---
+
+## Bölüm 6 — Yönetim Panelini Kendi Deponuza Bağlama (devir adımı)
+
+Panel, özel alan adında (`ceyhunelgin.com/admin/`) hangi depoya yazacağını
+URL'den anlayamaz; `admin/admin.js` dosyasının başındaki `FALLBACK_REPO`
+sabitini okur. Teslimde bu sabit hazırlayanın deposunu gösterir; site kendi
+deponuza taşındığında **bir kez** güncellenmelidir — yoksa panel eski depoya
+yazar:
+
+1. Repo → `admin/admin.js` → kalem (Edit) simgesine tıklayın.
+2. En üstteki satırı kendi deponuzla değiştirin:
+   ```js
+   const FALLBACK_REPO = 'KULLANICI/ceyhunelgin';
+   ```
+3. **Commit changes** tıklayın. Hepsi bu.
+
+Geçici çözüm (kod değiştirmeden): paneli
+`https://ceyhunelgin.com/admin/?repo=KULLANICI/ceyhunelgin` adresinden açın;
+seçim tarayıcıda hatırlanır. Panelde giriş yaptıktan sonra üst satırda hangi
+depoya bağlı olduğu her zaman görünür — oradan doğrulayabilirsiniz.
 
 ---
 

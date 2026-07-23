@@ -114,6 +114,10 @@ function escapeHtml(s) {
   }[c]));
 }
 
+// Turkce buyuk harfleri (I/I) arama icin tek forma indir; boylece
+// "informal" sorgusu "INFORMAL"i, "iktisat" sorgusu "IKTISAT"i bulur
+const fold = (s) => s.replace(/[İI]/g, 'i').toLowerCase();
+
 function pubToLi(pub) {
   let title = escapeHtml(pub.title);
   if (pub.authors) title += ' (with ' + escapeHtml(pub.authors) + ')';
@@ -161,6 +165,8 @@ function renderPubs(pubs) {
 
   // toplam sayiyi intro/stat guncelle
   updateCounts(pubs.length);
+  loaded.pubs = true;
+  updateLinkStat();
   resetFilter();
 }
 
@@ -184,15 +190,14 @@ function resetFilter() {
 }
 
 function runFilter() {
-  const q = searchInput.value.trim().toLowerCase();
-  if (q.length === 0) { resetFilter(); return; }
-  if (q.length < 2) { resetFilter(); status.textContent = ''; return; }
+  const q = fold(searchInput.value.trim());
+  if (q.length < 2) { resetFilter(); return; }
 
   let total = 0;
   yearBlocks.forEach((d) => {
     let n = 0;
     d.querySelectorAll('.pubs li').forEach((li) => {
-      const hit = li.textContent.toLowerCase().includes(q);
+      const hit = fold(li.textContent).includes(q);
       li.style.display = hit ? '' : 'none';
       if (hit) n++;
     });
@@ -247,6 +252,19 @@ function cardIcon(label) {
 
 let booksData = [], projectsData = [], teachingData = [], contactData = null;
 
+// stat 3 (DOI / kaynak baglantisi sayisi): her bolum ayri fetch ile geldigi
+// icin sayac ancak 4 kaynak da yuklendikten sonra hesaplanir; boylece
+// hangi istegin once bittigine bagli yaris durumu olusmaz
+const loaded = { pubs: false, books: false, projects: false, contact: false };
+function updateLinkStat() {
+  if (!(loaded.pubs && loaded.books && loaded.projects && loaded.contact)) return;
+  const total = allPubs.filter((p) => p.doi).length
+    + booksData.filter((b) => b.link).length
+    + projectsData.filter((p) => p.link).length
+    + (contactData.links || []).length;
+  setStat(3, total + '+');
+}
+
 function setStat(index, value) {
   const nums = document.querySelectorAll('.stat__num');
   if (nums[index]) nums[index].textContent = value;
@@ -270,6 +288,8 @@ function renderBooks(items) {
   c.innerHTML = '<div class="cards">' + items.map((it) => renderCard(it, c)).join('') + '</div>';
   c.querySelectorAll('.card').forEach((el) => observeReveal(el));
   setStat(1, items.length);
+  loaded.books = true;
+  updateLinkStat();
 }
 
 function renderProjects(items) {
@@ -278,6 +298,8 @@ function renderProjects(items) {
   if (!c) return;
   c.innerHTML = '<div class="cards">' + items.map((it) => renderCard(it, c)).join('') + '</div>';
   c.querySelectorAll('.card').forEach((el) => observeReveal(el));
+  loaded.projects = true;
+  updateLinkStat();
 }
 
 function renderTeaching(items) {
@@ -329,11 +351,8 @@ function renderContact(data) {
   html += linksHtml + '</p></div>';
   html += '</div>';
   c.innerHTML = html;
-  // DOI/link sayisini guncelle: pubs DOI + books link + projects link + contact links
-  const pubDois = allPubs.filter((p) => p.doi).length;
-  const bookLinks = booksData.filter((b) => b.link).length;
-  const projLinks = projectsData.filter((p) => p.link).length;
-  setStat(3, pubDois + bookLinks + projLinks + (data.links || []).length + '+');
+  loaded.contact = true;
+  updateLinkStat();
   c.querySelectorAll('.contact__item').forEach((el) => observeReveal(el));
 }
 

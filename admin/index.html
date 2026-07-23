@@ -58,10 +58,11 @@
       <h2>Ceyhun Elgin — kişisel web sitesi</h2>
       <p style="margin:14px 0 4px;color:var(--muted);font-size:.9rem">Sadece site sahibi. Token tarayıcınızda saklanır, sunucuya gönderilmez.</p>
       <label for="i-token">GitHub Personal Access Token</label>
-      <input id="i-token" type="password" placeholder="ghp_...">
-      <p class="hint">Token oluşturmak için: GitHub → Settings → Developer settings → Personal access tokens (classic) → <b>repo</b> yetkisi. Aşağıdaki bağlantıdan açabilirsiniz.</p>
-      <a class="linkout" href="https://github.com/settings/tokens/new?scopes=repo&description=ceyhunelgin-panel" target="_blank" rel="noopener" style="display:block;margin:8px 0">Yeni token oluştur ↗</a>
+      <input id="i-token" type="password" placeholder="github_pat_... veya ghp_...">
+      <p class="hint">Token oluşturmak için: GitHub → Settings → Developer settings → <b>Fine-grained tokens</b> → Generate: <b>Only select repositories</b> altından site deposunu seçin, <b>Repository permissions → Contents</b>: <b>Read and write</b> verin. (Alternatif: classic token, <b>repo</b> yetkisi.)</p>
+      <a class="linkout" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" style="display:block;margin:8px 0">Fine-grained token oluştur ↗</a>
       <button id="btn-login" style="width:100%">Giriş</button>
+      <p class="hint">Panel, depoyu açıldığı adresten otomatik bulur. Farklı bir depoya bağlanmak için adresi <code>/admin/?repo=kullanici/repo</code> biçiminde açın; seçim tarayıcıda hatırlanır.</p>
       <p id="login-err" class="hidden" style="color:var(--err);font-size:.85rem;margin-top:10px"></p>
     </div>
   </div>

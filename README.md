@@ -58,15 +58,24 @@ tarayıcıdaki yönetim panelinden** tüm bölümler güncellenebilir.
 Panele girmek için yalnızca bir **Personal Access Token** gerekir; depo/dal
 otomatik tespit edilir (panelin açıldığı URL'den):
 
-1. GitHub → Settings → Developer settings → Personal access tokens (classic) →
-   **Generate new token (classic)** → açıklama `ceyhunelgin-panel`, süre örn. 90 gün,
-   **`repo`** yetkisi → Generate. Token'ı kopyalayın (`ghp_...`).
+1. GitHub → Settings → Developer settings → Personal access tokens →
+   **Fine-grained tokens** → **Generate new token**:
+   - **Repository access:** *Only select repositories* → site deposunu seçin
+   - **Repository permissions → Contents:** **Read and write**
+   - Süre: örn. 90 gün → Generate. Token'ı kopyalayın (`github_pat_...`).
 2. Panele yapıştırın → **Giriş**.
+   (Alternatif: **classic** token, `repo` yetkisiyle de çalışır.)
 3. Token tarayıcınızın `localStorage`'ında saklanır; hiçbir sunucudan geçmez.
    Sayfa yeniden açınca otomatik giriş yapar. Çıkış yapıldığında silinir.
 
-> Güvenlik: token `repo` yetkisine sahiptir; kimseyle paylaşılmamalı. Panel
-> yalnızca sizin tarafınızdan bilinen URL'de durur.
+> Güvenlik: fine-grained token yalnızca seçtiğiniz tek depoda ve yalnızca
+> içerik okuma/yazma yetkisine sahiptir; yine de kimseyle paylaşılmamalıdır.
+> Panel yalnızca sizin tarafınızdan bilinen URL'de durur.
+
+> Repo tespiti: `*.github.io/<repo>/admin/` adresinde repo URL'den okunur;
+> özel alan adında `admin/admin.js` içindeki `FALLBACK_REPO` sabitinden
+> okunur. Kod değiştirmeden farklı bir depoya bağlanmak için paneli
+> `/admin/?repo=kullanici/repo` adresinden açın (seçim tarayıcıda hatırlanır).
 
 ### 3. Bölümler (sekmeler)
 
@@ -105,9 +114,10 @@ Site statiktir; herhangi bir statik hostta çalışır. GitHub Pages önerilir
 ## Alan Adını (URL) Değiştirme
 
 Site başka bir alan adına taşınırsa, `index.html` `<head>` bölümündeki şu satırlar
-güncellenmelidir:
+güncellenmelidir (`canonical` dahil):
 
 ```html
+<link rel="canonical" href="https://ceyhunelgin.com/">
 <meta property="og:url" content="https://ceyhunelgin.com/">
 <meta property="og:image" content="https://ceyhunelgin.com/assets/photo.jpg">
 ```
@@ -118,8 +128,13 @@ ve JSON-LD bloğunda:
 "url": "https://ceyhunelgin.com/"
 ```
 
-Bu üç yer dışında tüm yollar görecelidir (`assets/...`, `css/...`, `js/...`,
+Bu dört yer dışında tüm yollar görecelidir (`assets/...`, `css/...`, `js/...`,
 `admin/...`), yani kök alan adına taşınırken ek bir değişiklik gerektirmez.
+
+> Site başka bir **depoya** taşınırsa ayrıca `admin/admin.js` dosyasındaki
+> `FALLBACK_REPO` sabiti yeni depoyu gösterecek şekilde güncellenmelidir;
+> aksi hâlde yönetim paneli eski depoya yazar (bkz. `DOMAIN-KURULUM.md`
+> Bölüm 6).
 
 ## Alternatif: JSON'u elle güncellemek
 
