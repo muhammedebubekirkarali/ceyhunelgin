@@ -5,76 +5,317 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Yönetim Paneli — Ceyhun Elgin</title>
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<script>
+  // Ana siteyle ayni tema: localStorage'daki 'theme' tercihi uygulanir,
+  // yoksa sistem tercihi. Boyama oncesi calisir (flas olmaz).
+  (function () {
+    try {
+      var t = localStorage.getItem('theme');
+      if (t !== 'dark' && t !== 'light') {
+        t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.dataset.theme = t;
+    } catch (e) { /* private mode */ }
+  })();
+</script>
 <style>
-  :root{
-    --bg:#0f172a; --card:#1e293b; --card2:#334155; --text:#e2e8f0;
-    --muted:#94a3b8; --accent:#3b82f6; --accent2:#2563eb; --ok:#22c55e; --err:#ef4444; --warn:#f59e0b;
-    --radius:12px;
+  /* Ana sitenin (css/style.css) renk/olcu sistemiyle birebir ayni palet */
+  :root {
+    --brand: #16233c;
+    --brand-light: #22345a;
+    --navy: #16233c;
+    --navy-light: #22345a;
+    --gold: #b98a2f;
+    --gold-soft: #d9b25f;
+    --gold-text: #8a651f;
+    --ink: #1d2433;
+    --muted: #5b6474;
+    --bg: #f7f6f2;
+    --bg-alt: #efede6;
+    --card: #ffffff;
+    --line: #e2ded2;
+    --hover: #faf8f2;
+    --radius: 14px;
+    --shadow: 0 10px 30px rgba(22, 35, 60, 0.08);
+    --ok: #4d7c0f;
+    --err: #b42318;
+    --input-bg: #ffffff;
+    --font-serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
-  .wrap{max-width:1000px;margin:0 auto;padding:24px 16px 80px}
-  h1{font-size:1.4rem;margin:0 0 4px}
-  h2{font-size:1.05rem;margin:0 0 12px;color:var(--muted);font-weight:500}
-  .muted{color:var(--muted);font-size:.9rem}
-  .card{background:var(--card);border:1px solid var(--card2);border-radius:var(--radius);padding:20px;margin-bottom:16px}
-  input,select,textarea{width:100%;background:#0b1220;color:var(--text);border:1px solid var(--card2);border-radius:8px;padding:10px 12px;font:inherit;font-size:.95rem}
-  textarea{min-height:90px;resize:vertical}
-  label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}
-  button{cursor:pointer;border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:600;background:var(--accent);color:#fff}
-  button:hover{background:var(--accent2)}
-  button.sec{background:var(--card2);color:var(--text)}
-  button.sec:hover{background:#475569}
-  button.danger{background:var(--err)}
-  button.danger:hover{background:#dc2626}
-  .row{display:flex;gap:10px;flex-wrap:wrap}
-  .row>*{flex:1;min-width:120px}
-  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-  .tabs button{background:var(--card);color:var(--muted);border:1px solid var(--card2)}
-  .tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:12px 20px;border-radius:8px;background:var(--card);border:1px solid var(--card2);box-shadow:0 8px 24px rgba(0,0,0,.4);font-weight:600;z-index:50;display:none;max-width:90vw}
-  .toast.show{display:block}
-  .toast.ok{border-color:var(--ok);color:var(--ok)}
-  .toast.err{border-color:var(--err);color:var(--err)}
-  .hidden{display:none}
-  .login{max-width:420px;margin:60px auto}
-  .login .hint{font-size:.8rem;color:var(--muted);margin-top:6px}
-  .save-bar{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
-  .stat{font-size:.8rem;color:var(--muted)}
-  details{margin-top:10px;border:1px solid var(--card2);border-radius:8px;padding:10px 12px}
-  summary{cursor:pointer;color:var(--muted);font-size:.85rem}
-  .linkout{color:var(--accent);text-decoration:none}
-  code{background:#0b1220;padding:2px 6px;border-radius:4px;font-size:.85em}
-  .pill{display:inline-block;background:var(--card2);color:var(--muted);border-radius:999px;padding:2px 10px;font-size:.75rem;margin-left:8px}
+  html[data-theme="dark"] {
+    --navy: #b3c2dc;
+    --navy-light: #c6d2e8;
+    --gold: #d9b25f;
+    --gold-soft: #e3c37e;
+    --gold-text: #e3c37e;
+    --ink: #e3e7ee;
+    --muted: #9aa3b5;
+    --bg: #10141c;
+    --bg-alt: #151a24;
+    --card: #1b2230;
+    --line: #2c3547;
+    --hover: #222a3a;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    --ok: #9ccc65;
+    --err: #f2938a;
+    --input-bg: #141a26;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+
+  /* ---------- Ust cubuk (ana site header'iyla ayni dil) ---------- */
+  .topbar {
+    background: linear-gradient(160deg, var(--brand) 0%, var(--brand-light) 100%);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  }
+  .topbar__inner {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 16px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .topbar__brand {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  .topbar__brand:hover { color: var(--gold-soft); }
+  .topbar__divider { width: 1px; height: 22px; background: rgba(255, 255, 255, 0.25); }
+  .topbar__sub { color: var(--gold-soft); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .topbar__site { margin-left: auto; }
+
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 28px 16px 80px; }
+
+  /* ---------- Tipografi ---------- */
+  .card h1, .panel-title {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    color: var(--navy);
+    margin: 0 0 4px;
+    position: relative;
+    padding-bottom: 0.6rem;
+  }
+  .card h1::after, .panel-title::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 52px;
+    height: 3px;
+    background: var(--gold);
+    border-radius: 2px;
+  }
+  .card h2 {
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    color: var(--navy);
+    margin: 0 0 14px;
+    position: relative;
+    padding-bottom: 0.5rem;
+  }
+  .card h2::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 40px;
+    height: 2px;
+    background: var(--gold);
+    border-radius: 2px;
+  }
+  .muted { color: var(--muted); font-size: 0.9rem; }
+
+  /* ---------- Kartlar ---------- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+
+  /* ---------- Form elemanlari ---------- */
+  input, select, textarea {
+    width: 100%;
+    background: var(--input-bg);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    font: inherit;
+    font-size: 0.95rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(185, 138, 47, 0.18);
+  }
+  textarea { min-height: 90px; resize: vertical; }
+  label { display: block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 12px 0 5px; }
+
+  /* ---------- Butonlar (ana site: birincil = altin) ---------- */
+  button {
+    cursor: pointer;
+    border: 0;
+    border-radius: 10px;
+    padding: 0.65rem 1.3rem;
+    font: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    background: var(--gold);
+    color: #16233c;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
+  }
+  button:hover { background: var(--gold-soft); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(185, 138, 47, 0.3); }
+  button.sec {
+    background: var(--card);
+    color: var(--navy-light);
+    border: 1px solid var(--line);
+  }
+  button.sec:hover { background: var(--hover); border-color: var(--gold); color: var(--gold); box-shadow: none; }
+  button.danger { background: var(--err); color: #fff; }
+  button.danger:hover { background: #921c13; box-shadow: 0 6px 16px rgba(180, 35, 24, 0.3); }
+
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row > * { flex: 1; min-width: 120px; }
+
+  /* ---------- Sekmeler ---------- */
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tabs button {
+    background: var(--card);
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.5rem 1.1rem;
+    font-size: 0.88rem;
+  }
+  .tabs button:hover { background: var(--hover); border-color: var(--gold); color: var(--gold); box-shadow: none; transform: none; }
+  .tabs button.on { background: var(--gold); color: #16233c; border-color: var(--gold); }
+
+  /* ---------- Panel basligi ---------- */
+  .panel-head { align-items: center; margin-bottom: 18px; }
+  .panel-head > div { flex: 1 1 auto; }
+  .panel-head .muted { margin: 6px 0 0; }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 22px;
+    border-radius: 10px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+    font-weight: 600;
+    z-index: 50;
+    display: none;
+    max-width: 90vw;
+  }
+  .toast.show { display: block; }
+  .toast.ok { border-color: var(--ok); color: var(--ok); }
+  .toast.err { border-color: var(--err); color: var(--err); }
+
+  .hidden { display: none; }
+
+  /* ---------- Giris ---------- */
+  .login { max-width: 440px; margin: 48px auto; }
+  .login .hint { font-size: 0.83rem; color: var(--muted); margin-top: 8px; line-height: 1.55; }
+  #login-err { color: var(--err); font-size: 0.88rem; margin-top: 10px; font-weight: 600; }
+
+  .save-bar { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+  .stat { font-size: 0.8rem; color: var(--muted); }
+
+  details { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+
+  .linkout { color: var(--navy-light); text-decoration-color: var(--gold); text-underline-offset: 3px; font-weight: 600; }
+  .linkout:hover { color: var(--gold); }
+  .topbar .linkout { color: #d7dce6; text-decoration: none; font-size: 0.88rem; }
+  .topbar .linkout:hover { color: var(--gold-soft); }
+
+  code { background: var(--bg-alt); color: var(--gold-text); padding: 2px 7px; border-radius: 6px; font-size: 0.85em; }
+
+  .pill {
+    display: inline-block;
+    background: rgba(185, 138, 47, 0.12);
+    color: var(--gold-text);
+    border-radius: 999px;
+    padding: 0.12rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-left: 8px;
+    vertical-align: 1px;
+  }
+
+  @media (max-width: 560px) {
+    .topbar__sub { display: none; }
+    .login { margin: 28px auto; }
+    .card { padding: 18px; }
+  }
 </style>
 </head>
 <body>
+
+<header class="topbar">
+  <div class="topbar__inner">
+    <a class="topbar__brand" href="../">Ceyhun&nbsp;Elgin</a>
+    <span class="topbar__divider"></span>
+    <span class="topbar__sub">Yönetim Paneli</span>
+    <a class="topbar__site linkout" href="../">Siteyi görüntüle ↗</a>
+  </div>
+</header>
+
 <div class="wrap">
 
   <!-- Giris -->
   <div id="login" class="login">
     <div class="card">
       <h1>Yönetim Paneli</h1>
-      <h2>Ceyhun Elgin — kişisel web sitesi</h2>
-      <p style="margin:14px 0 4px;color:var(--muted);font-size:.9rem">Sadece site sahibi. Token tarayıcınızda saklanır, sunucuya gönderilmez.</p>
+      <p class="muted" style="margin:10px 0 2px">Ceyhun Elgin — kişisel web sitesi · Yalnızca site sahibi. Token tarayıcınızda saklanır, sunucuya gönderilmez.</p>
       <label for="i-token">GitHub Personal Access Token</label>
       <input id="i-token" type="password" placeholder="github_pat_... veya ghp_...">
       <p class="hint">Token oluşturmak için: GitHub → Settings → Developer settings → <b>Fine-grained tokens</b> → Generate: <b>Only select repositories</b> altından site deposunu seçin, <b>Repository permissions → Contents</b>: <b>Read and write</b> verin. (Alternatif: classic token, <b>repo</b> yetkisi.)</p>
-      <a class="linkout" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" style="display:block;margin:8px 0">Fine-grained token oluştur ↗</a>
+      <a class="linkout" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" style="display:block;margin:10px 0">Fine-grained token oluştur ↗</a>
       <button id="btn-login" style="width:100%">Giriş</button>
+      <p id="login-err" class="hidden"></p>
       <p class="hint">Panel, depoyu açıldığı adresten otomatik bulur. Farklı bir depoya bağlanmak için adresi <code>/admin/?repo=kullanici/repo</code> biçiminde açın; seçim tarayıcıda hatırlanır.</p>
-      <p id="login-err" class="hidden" style="color:var(--err);font-size:.85rem;margin-top:10px"></p>
     </div>
   </div>
 
   <!-- Panel -->
   <div id="panel" class="hidden">
-    <div class="row" style="align-items:center;margin-bottom:16px">
-      <div style="flex:1 1 auto">
-        <h1 style="margin:0">Yönetim Paneli</h1>
-        <p class="muted" style="margin:2px 0 0"><span id="p-repo"></span> · <span id="p-branch"></span> · <span class="pill" id="p-name"></span></p>
+    <div class="row panel-head">
+      <div>
+        <h1 class="panel-title" style="margin:0">Yönetim Paneli</h1>
+        <p class="muted"><span id="p-repo"></span> · <span id="p-branch"></span> <span class="pill" id="p-name"></span></p>
       </div>
-      <button class="sec" id="btn-logout">Çıkış</button>
+      <button class="sec" id="btn-logout" style="flex:0 0 auto">Çıkış</button>
     </div>
 
     <div class="tabs" id="tabs">
